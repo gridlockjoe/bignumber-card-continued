@@ -1,3 +1,4 @@
+/* Last modified: 14-Jan-2026 09:56 */
 class BigNumberCard extends HTMLElement {
   _DEFAULT_STYLE(){return 'var(--label-badge-blue)';}
   _DEFAULT_COLOR(){return 'var(--primary-text-color)';}
@@ -37,6 +38,15 @@ class BigNumberCard extends HTMLElement {
     // Defaults to null to maintain backwards compatibility with scale-based padding
     if (!cardConfig.card_padding) cardConfig.card_padding = null;
 
+    // Standardized color option names with backwards compatibility
+    // fill_color: Bar fill color (new name for bnStyle)
+    // text_color: Text color (new name for color)
+    // background_color: Unfilled bar portion color
+    // Old names (bnStyle, color) still work for backwards compatibility
+    if (!cardConfig.fill_color) cardConfig.fill_color = null;
+    if (!cardConfig.text_color) cardConfig.text_color = null;
+    if (!cardConfig.background_color) cardConfig.background_color = null;
+
     // NEW: Tap action support (PR #48 - issue #41)
     // Defaults to more-info to maintain backwards compatibility with existing behavior
     if (!cardConfig.tap_action) {
@@ -63,24 +73,25 @@ class BigNumberCard extends HTMLElement {
     style.textContent = `
       ha-card {
         text-align: center;
-        --bignumber-color: ${this._getColor(null, cardConfig)};
-        --bignumber-fill-color: ${this._getStyle(null, cardConfig)};
+        --bignumber-text-color: ${this._getTextColor(null, cardConfig)};
+        --bignumber-fill-color: ${this._getFillColor(null, cardConfig)};
+        --bignumber-background-color: ${this._getBackgroundColor(null, cardConfig)};
         --bignumber-percent: 100%;
         --bignumber-direction: ${cardConfig.from};
         --base-unit: ${cardConfig.scale};
         padding: ${cardPadding};
-        background: linear-gradient(to var(--bignumber-direction), var(--card-background-color) var(--bignumber-percent), var(--bignumber-fill-color) var(--bignumber-percent));
+        background: linear-gradient(to var(--bignumber-direction), var(--bignumber-background-color) var(--bignumber-percent), var(--bignumber-fill-color) var(--bignumber-percent));
       }
       #value {
         font-size: ${valueFontSize};
         line-height: ${valueFontSize};
-        color: var(--bignumber-color);
+        color: var(--bignumber-text-color);
       }
       #value small{opacity: ${cardConfig.opacity}}
       #title {
         font-size: ${titleFontSize};
         line-height: ${titleFontSize};
-        color: var(--bignumber-color);
+        color: var(--bignumber-text-color);
       }
     `;
     card.appendChild(content);
@@ -184,22 +195,43 @@ class BigNumberCard extends HTMLElement {
     }
   }
 
-  _getColor(entityState, config) {
+  _getTextColor(entityState, config) {
     if (config.severity) {
       const severity = this._computeSeverity(entityState, config.severity);
-      if (severity && severity.color) return severity.color;
+      // Check new name first, fall back to old name for backwards compatibility
+      if (severity && (severity.text_color || severity.color)) {
+        return severity.text_color || severity.color;
+      }
     }
-    if (config.color) return config.color;
+    // Check new name first, fall back to old name for backwards compatibility
+    if (config.text_color || config.color) {
+      return config.text_color || config.color;
+    }
     return this._DEFAULT_COLOR();
   }
 
-  _getStyle(entityState, config) {
+  _getFillColor(entityState, config) {
     if (config.severity) {
       const severity = this._computeSeverity(entityState, config.severity);
-      if (severity && severity.bnStyle) return severity.bnStyle;
+      // Check new name first, fall back to old name (bnStyle) for backwards compatibility
+      if (severity && (severity.fill_color || severity.bnStyle)) {
+        return severity.fill_color || severity.bnStyle;
+      }
     }
-    if (config.bnStyle) return config.bnStyle;
+    // Check new name first, fall back to old name (bnStyle) for backwards compatibility
+    if (config.fill_color || config.bnStyle) {
+      return config.fill_color || config.bnStyle;
+    }
     return this._DEFAULT_STYLE();
+  }
+
+  _getBackgroundColor(entityState, config) {
+    if (config.severity) {
+      const severity = this._computeSeverity(entityState, config.severity);
+      if (severity && severity.background_color) return severity.background_color;
+    }
+    if (config.background_color) return config.background_color;
+    return 'var(--card-background-color)';
   }
 
   _translatePercent(value, min, max) {
@@ -246,8 +278,9 @@ class BigNumberCard extends HTMLElement {
       if (config.min !== undefined && config.max !== undefined) {
         root.querySelector("ha-card").style.setProperty('--bignumber-percent', `${this._translatePercent(entityState, config.min, config.max)}%`);
       }
-      root.querySelector("ha-card").style.setProperty('--bignumber-fill-color', `${this._getStyle(entityState, config)}`);
-      root.querySelector("ha-card").style.setProperty('--bignumber-color', `${this._getColor(entityState, config)}`);
+      root.querySelector("ha-card").style.setProperty('--bignumber-fill-color', `${this._getFillColor(entityState, config)}`);
+      root.querySelector("ha-card").style.setProperty('--bignumber-text-color', `${this._getTextColor(entityState, config)}`);
+      root.querySelector("ha-card").style.setProperty('--bignumber-background-color', `${this._getBackgroundColor(entityState, config)}`);
       this._entityState = entityState
       // NEW: Use locale-aware formatting (PR #46 - issue #45)
       const numValue = parseFloat(entityState);

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0-continued] - 2026-01-14
+
+### Added
+- New `background_color` option for unfilled bar portion
+  - Can be set globally or per-severity condition
+  - Defaults to card background color for backwards compatibility
+
+### Changed
+- Standardized color option names for clarity (backwards compatible)
+  - `fill_color` replaces `bnStyle` (old name still works)
+  - `text_color` replaces `color` (old name still works)
+  - `background_color` for unfilled bar (new option)
+- Internal CSS variables renamed for consistency:
+  - `--bignumber-color` renamed to `--bignumber-text-color`
+
 ## [1.0.0-continued] - 2025-12-15
 
 ### Added
