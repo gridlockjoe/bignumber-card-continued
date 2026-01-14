@@ -9,13 +9,13 @@ IMPORTANT: This is a community-maintained continuation of the original [bignumbe
 
 ## About This Continuation
 
-This is a community-maintained continuation of the original [bignumber-card](https://github.com/custom-cards/bignumber-card) by [@ciotlosm](https://github.com/ciotlosm), which has not been actively maintained since January 2022.  This project maintains the original functionality while incorporating bug fixes and community-requested features. The original authors deserve full credit for the excellent foundation they created.
+This is a community-maintained continuation of the original [bignumber-card](https://github.com/custom-cards/bignumber-card) by [@ciotlosm](https://github.com/ciotlosm). The original authors deserve full credit for the excellent foundation they created.
 
 ## Documentation
 
 A simple card to display big numbers for sensors. It also supports severity levels as background.
 
-(screenshot here)
+<img width="1029" height="164" alt="Screenshot 2026-01-14 at 09 28 25" src="https://github.com/user-attachments/assets/a26b52f9-4164-459d-b32e-fd4feb2949ce" />
 
 ## Installation
 
