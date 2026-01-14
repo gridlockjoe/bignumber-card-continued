@@ -1,14 +1,12 @@
 # Big Number Card - Continued
 
-IMPORTANT: This is a community-maintained continuation of the original [bignumber-card](https://github.com/custom-cards/bignumber-card) by [@ciotlosm](https://github.com/ciotlosm), which has not been actively maintained since January 2022.
-
 ![GitHub Release](https://img.shields.io/github/v/release/sxdjt/bignumber-card-continued?style=for-the-badge)
 [![AI Assisted](https://img.shields.io/badge/AI-Claude%20Code-AAAAAA.svg?style=for-the-badge)](https://claude.ai/code)
 ![GitHub License](https://img.shields.io/github/license/sxdjt/bignumber-card-continued?style=for-the-badge)
 
 ## About This Continuation
 
-This project maintains the original functionality while incorporating bug fixes and community-requested features. The original authors deserve full credit for the excellent foundation they created.
+This is a community-maintained continuation of the original [bignumber-card](https://github.com/custom-cards/bignumber-card) by [@ciotlosm](https://github.com/ciotlosm), which has not been actively maintained since January 2022.  This project maintains the original functionality while incorporating bug fixes and community-requested features. The original authors deserve full credit for the excellent foundation they created.
 
 ## Migrating to the Continued version
 
