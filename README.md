@@ -78,7 +78,7 @@ The deprecated names `bnStyle` and `color` also work in severity objects for bac
 | service_data | object | optional | Service data to pass when action is `call-service`
 | url_path | string | optional | URL to open when action is `url`
 
-### Important Notes
+### Notes
 
 - Numbers are automatically formatted with locale-aware thousands separators (e.g., 19,578 in US, 19.578 in German)
 - Font sizes can be customized independently from the `scale` parameter for better layout control

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0-continued] - 2026-01-19
+
+### Added
+- Visual configuration editor for Home Assistant UI
+  - Entity picker with autocomplete
+  - All card options configurable without YAML
+  - Collapsible sections for organized settings:
+    - Basic Settings (entity, title)
+    - Display Options (attribute, hide unit, decimal places, custom unit)
+    - Colors (text color, fill color, background color, opacity)
+    - Sizing (scale, value/title font sizes, card padding)
+    - Progress Bar (min, max, fill direction)
+    - None State Handling (display text, CSS classes)
+    - Tap Action (all action types with conditional fields)
+    - Severity Levels (add/remove/edit thresholds in UI)
+  - Card preview updates in real-time as settings change
+
 ## [1.1.0-continued] - 2026-01-14
 
 ### Added

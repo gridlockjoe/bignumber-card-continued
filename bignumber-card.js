@@ -1,7 +1,19 @@
-/* Last modified: 14-Jan-2026 09:56 */
+/* Last modified: 19-Jan-2026 23:10 */
 class BigNumberCard extends HTMLElement {
   _DEFAULT_STYLE(){return 'var(--label-badge-blue)';}
   _DEFAULT_COLOR(){return 'var(--primary-text-color)';}
+
+  static getConfigElement() {
+    return document.createElement('bignumber-card-editor');
+  }
+
+  static getStubConfig() {
+    return {
+      entity: '',
+      title: '',
+      scale: '50px'
+    };
+  }
 
   constructor() {
     super();
@@ -315,6 +327,531 @@ class BigNumberCard extends HTMLElement {
   }
 }
 
+// Visual Editor for Big Number Card
+// Uses ha-textfield for text inputs (maintains focus) and ha-selector for entity/select only
+class BigNumberCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this._config = {};
+    this._hass = null;
+    this._rendered = false;
+  }
+
+  setConfig(config) {
+    this._config = { ...config };
+    // Only render once initially, not on every config update from HA
+    // This prevents destroying DOM elements and losing focus
+    if (!this._rendered) {
+      this.render();
+      this._rendered = true;
+    }
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    // Update entity picker with hass reference
+    const entityPicker = this.shadowRoot?.querySelector('ha-selector');
+    if (entityPicker) {
+      entityPicker.hass = hass;
+    }
+  }
+
+  _fireConfigChanged() {
+    const event = new CustomEvent('config-changed', {
+      bubbles: true,
+      composed: true,
+      detail: { config: this._config }
+    });
+    this.dispatchEvent(event);
+  }
+
+  _valueChanged(field, value) {
+    if (field.startsWith('tap_action.')) {
+      const subField = field.replace('tap_action.', '');
+      const newTapAction = { ...(this._config.tap_action || { action: 'more-info' }) };
+      if (value === '' || value === undefined) {
+        delete newTapAction[subField];
+      } else {
+        newTapAction[subField] = value;
+      }
+      this._config = { ...this._config, tap_action: newTapAction };
+      // Re-render only for action type changes (shows/hides conditional fields)
+      if (subField === 'action') {
+        this._rendered = false;
+        this.render();
+        this._rendered = true;
+      }
+    } else {
+      if (value === '' || value === undefined) {
+        const newConfig = { ...this._config };
+        delete newConfig[field];
+        this._config = newConfig;
+      } else {
+        this._config = { ...this._config, [field]: value };
+      }
+    }
+    this._fireConfigChanged();
+  }
+
+  _createTextfield(field, label, value, helperText, type = 'text') {
+    const container = document.createElement('div');
+    container.className = 'field';
+
+    const textfield = document.createElement('ha-textfield');
+    textfield.label = label;
+    textfield.value = value ?? '';
+    if (type === 'number') {
+      textfield.type = 'number';
+    }
+    if (helperText) {
+      textfield.helperPersistent = true;
+      textfield.helper = helperText;
+    }
+    textfield.addEventListener('input', (e) => {
+      const newValue = type === 'number' ?
+        (e.target.value === '' ? undefined : Number(e.target.value)) :
+        e.target.value;
+      this._valueChanged(field, newValue);
+    });
+
+    container.appendChild(textfield);
+    return container;
+  }
+
+  _createSwitch(field, label, checked) {
+    const container = document.createElement('div');
+    container.className = 'toggle-row';
+
+    const labelEl = document.createElement('label');
+    labelEl.textContent = label;
+
+    const toggle = document.createElement('ha-switch');
+    toggle.checked = checked || false;
+    toggle.addEventListener('change', (e) => {
+      this._valueChanged(field, e.target.checked);
+    });
+
+    container.appendChild(labelEl);
+    container.appendChild(toggle);
+    return container;
+  }
+
+  _createEntityPicker(field, label, value) {
+    const container = document.createElement('div');
+    container.className = 'field';
+
+    const selector = document.createElement('ha-selector');
+    selector.hass = this._hass;
+    selector.selector = { entity: {} };
+    selector.value = value || '';
+    selector.label = label;
+    selector.addEventListener('value-changed', (e) => {
+      this._valueChanged(field, e.detail.value);
+    });
+
+    container.appendChild(selector);
+    return container;
+  }
+
+  _createSelect(field, label, value, options) {
+    const container = document.createElement('div');
+    container.className = 'field';
+
+    const labelEl = document.createElement('label');
+    labelEl.textContent = label;
+    labelEl.className = 'select-label';
+
+    const select = document.createElement('select');
+    select.className = 'ha-select';
+    options.forEach(opt => {
+      const option = document.createElement('option');
+      option.value = opt.value;
+      option.textContent = opt.label;
+      if (opt.value === value) {
+        option.selected = true;
+      }
+      select.appendChild(option);
+    });
+    select.addEventListener('change', (e) => {
+      this._valueChanged(field, e.target.value);
+    });
+
+    container.appendChild(labelEl);
+    container.appendChild(select);
+    return container;
+  }
+
+  _createExpansionPanel(header, content) {
+    const panel = document.createElement('ha-expansion-panel');
+    panel.header = header;
+    panel.outlined = true;
+    panel.appendChild(content);
+    return panel;
+  }
+
+  _createSeverityItem(index, sev) {
+    const item = document.createElement('div');
+    item.className = 'severity-item';
+
+    // Value field
+    const valueField = document.createElement('ha-textfield');
+    valueField.label = 'Value';
+    valueField.type = 'number';
+    valueField.value = sev.value ?? '';
+    valueField.addEventListener('input', (e) => {
+      this._updateSeverity(index, 'value', e.target.value === '' ? undefined : Number(e.target.value));
+    });
+
+    // Fill color field (use new standard name, read from either for backwards compat)
+    const fillField = document.createElement('ha-textfield');
+    fillField.label = 'Fill Color';
+    fillField.value = sev.fill_color || sev.bnStyle || '';
+    fillField.addEventListener('input', (e) => {
+      this._updateSeverity(index, 'fill_color', e.target.value);
+    });
+
+    // Text color field (use new standard name, read from either for backwards compat)
+    const textField = document.createElement('ha-textfield');
+    textField.label = 'Text Color';
+    textField.value = sev.text_color || sev.color || '';
+    textField.addEventListener('input', (e) => {
+      this._updateSeverity(index, 'text_color', e.target.value);
+    });
+
+    // Remove button
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-button';
+    removeBtn.textContent = 'Remove';
+    removeBtn.addEventListener('click', () => {
+      this._removeSeverity(index);
+    });
+
+    item.appendChild(valueField);
+    item.appendChild(fillField);
+    item.appendChild(textField);
+    item.appendChild(removeBtn);
+    return item;
+  }
+
+  _updateSeverity(index, key, value) {
+    const severities = [...(this._config.severity || [])];
+    severities[index] = { ...severities[index], [key]: value };
+    // Remove empty values to keep config clean
+    if (!value) {
+      delete severities[index][key];
+    }
+    // Remove deprecated keys if new keys are being used
+    if (key === 'fill_color') {
+      delete severities[index].bnStyle;
+    }
+    if (key === 'text_color') {
+      delete severities[index].color;
+    }
+    this._config = { ...this._config, severity: severities };
+    this._fireConfigChanged();
+  }
+
+  _removeSeverity(index) {
+    const severities = [...(this._config.severity || [])];
+    severities.splice(index, 1);
+    if (severities.length === 0) {
+      const newConfig = { ...this._config };
+      delete newConfig.severity;
+      this._config = newConfig;
+    } else {
+      this._config = { ...this._config, severity: severities };
+    }
+    this._fireConfigChanged();
+    // Rebuild just the severity list, not the whole editor
+    this._rebuildSeverityList();
+  }
+
+  _rebuildSeverityList() {
+    const severityList = this.shadowRoot?.querySelector('.severity-list');
+    if (!severityList) return;
+
+    // Clear existing items
+    severityList.innerHTML = '';
+
+    // Rebuild items with correct indices
+    const severities = this._config.severity || [];
+    severities.forEach((sev, index) => {
+      severityList.appendChild(this._createSeverityItem(index, sev));
+    });
+  }
+
+  render() {
+    if (!this.shadowRoot) return;
+
+    const style = document.createElement('style');
+    style.textContent = `
+      :host {
+        display: block;
+        padding: 16px;
+      }
+      .field {
+        display: block;
+        margin-bottom: 16px;
+      }
+      .field ha-textfield,
+      .field ha-selector {
+        display: block;
+        width: 100%;
+      }
+      ha-expansion-panel {
+        display: block;
+        margin-bottom: 8px;
+      }
+      .panel-content {
+        padding: 12px;
+      }
+      .section-note {
+        font-size: 12px;
+        color: var(--secondary-text-color);
+        margin-bottom: 12px;
+        font-style: italic;
+      }
+      .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+      }
+      .toggle-row label {
+        font-size: 14px;
+        color: var(--primary-text-color);
+      }
+      h3 {
+        margin: 0 0 12px 0;
+        font-size: 16px;
+        font-weight: 500;
+      }
+      .select-label {
+        display: block;
+        font-size: 12px;
+        color: var(--secondary-text-color);
+        margin-bottom: 4px;
+      }
+      .ha-select {
+        display: block;
+        width: 100%;
+        padding: 8px 12px;
+        font-size: 14px;
+        border: 1px solid var(--divider-color);
+        border-radius: 4px;
+        background-color: var(--card-background-color, #fff);
+        color: var(--primary-text-color);
+        cursor: pointer;
+      }
+      .ha-select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+      }
+      .severity-list {
+        margin-bottom: 12px;
+      }
+      .severity-item {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr auto;
+        gap: 8px;
+        margin-bottom: 8px;
+        align-items: end;
+      }
+      .severity-item ha-textfield {
+        display: block;
+      }
+      .add-button, .remove-button {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .add-button {
+        background-color: var(--primary-color);
+        color: var(--text-primary-color, #fff);
+        width: 100%;
+      }
+      .add-button:hover {
+        opacity: 0.9;
+      }
+      .remove-button {
+        background-color: var(--error-color, #db4437);
+        color: white;
+        padding: 8px 12px;
+      }
+      .remove-button:hover {
+        opacity: 0.9;
+      }
+    `;
+
+    const root = document.createElement('div');
+
+    // Section 1: Basic (always visible)
+    const basicSection = document.createElement('div');
+    basicSection.innerHTML = '<h3>Basic Settings</h3>';
+
+    basicSection.appendChild(this._createEntityPicker('entity', 'Entity', this._config.entity));
+    basicSection.appendChild(this._createTextfield('title', 'Title', this._config.title));
+
+    root.appendChild(basicSection);
+
+    // Section 2: Display Options
+    const displayContent = document.createElement('div');
+    displayContent.className = 'panel-content';
+
+    displayContent.appendChild(this._createTextfield('attribute', 'Attribute (optional)', this._config.attribute, 'Display entity attribute instead of state'));
+    displayContent.appendChild(this._createSwitch('hideunit', 'Hide unit of measurement', this._config.hideunit));
+    displayContent.appendChild(this._createTextfield('round', 'Decimal places', this._config.round, 'Number of decimal places (0-10)', 'number'));
+    displayContent.appendChild(this._createTextfield('unit', 'Custom unit', this._config.unit, 'Override entity unit of measurement'));
+
+    root.appendChild(this._createExpansionPanel('Display Options', displayContent));
+
+    // Section 3: Colors
+    const colorsContent = document.createElement('div');
+    colorsContent.className = 'panel-content';
+
+    const colorNote = document.createElement('div');
+    colorNote.className = 'section-note';
+    colorNote.textContent = 'Use hex colors (#FF0000) or CSS variables (var(--primary-color))';
+    colorsContent.appendChild(colorNote);
+
+    colorsContent.appendChild(this._createTextfield('text_color', 'Text color', this._config.text_color || this._config.color));
+    colorsContent.appendChild(this._createTextfield('fill_color', 'Fill color (bar/background)', this._config.fill_color || this._config.bnStyle));
+    colorsContent.appendChild(this._createTextfield('background_color', 'Background color (unfilled portion)', this._config.background_color));
+    colorsContent.appendChild(this._createTextfield('opacity', 'Unit text opacity', this._config.opacity || '0.5', 'Value between 0 and 1'));
+
+    root.appendChild(this._createExpansionPanel('Colors', colorsContent));
+
+    // Section 4: Sizing
+    const sizingContent = document.createElement('div');
+    sizingContent.className = 'panel-content';
+
+    const sizingNote = document.createElement('div');
+    sizingNote.className = 'section-note';
+    sizingNote.textContent = 'Use CSS units (e.g., 50px, 2em, 1.5rem)';
+    sizingContent.appendChild(sizingNote);
+
+    sizingContent.appendChild(this._createTextfield('scale', 'Scale (base unit)', this._config.scale || '50px'));
+    sizingContent.appendChild(this._createTextfield('value_font_size', 'Value font size', this._config.value_font_size));
+    sizingContent.appendChild(this._createTextfield('title_font_size', 'Title font size', this._config.title_font_size));
+    sizingContent.appendChild(this._createTextfield('card_padding', 'Card padding', this._config.card_padding));
+
+    root.appendChild(this._createExpansionPanel('Sizing', sizingContent));
+
+    // Section 5: Progress Bar
+    const progressContent = document.createElement('div');
+    progressContent.className = 'panel-content';
+
+    const progressNote = document.createElement('div');
+    progressNote.className = 'section-note';
+    progressNote.textContent = 'Set min and max to enable progress bar display';
+    progressContent.appendChild(progressNote);
+
+    progressContent.appendChild(this._createTextfield('min', 'Minimum value', this._config.min, null, 'number'));
+    progressContent.appendChild(this._createTextfield('max', 'Maximum value', this._config.max, null, 'number'));
+    progressContent.appendChild(this._createSelect('from', 'Fill direction', this._config.from || 'left', [
+      { value: 'left', label: 'Left to Right' },
+      { value: 'right', label: 'Right to Left' },
+      { value: 'top', label: 'Top to Bottom' },
+      { value: 'bottom', label: 'Bottom to Top' }
+    ]));
+
+    root.appendChild(this._createExpansionPanel('Progress Bar', progressContent));
+
+    // Section 6: None State Handling
+    const noneContent = document.createElement('div');
+    noneContent.className = 'panel-content';
+
+    const noneNote = document.createElement('div');
+    noneNote.className = 'section-note';
+    noneNote.textContent = 'Configure display when sensor value is unavailable or NaN';
+    noneContent.appendChild(noneNote);
+
+    noneContent.appendChild(this._createTextfield('noneString', 'Display text when unavailable', this._config.noneString, 'e.g., Offline, N/A'));
+    noneContent.appendChild(this._createTextfield('noneCardClass', 'Card CSS class when unavailable', this._config.noneCardClass));
+    noneContent.appendChild(this._createTextfield('noneValueClass', 'Value CSS class when unavailable', this._config.noneValueClass));
+
+    root.appendChild(this._createExpansionPanel('None State Handling', noneContent));
+
+    // Section 7: Tap Action
+    const tapContent = document.createElement('div');
+    tapContent.className = 'panel-content';
+
+    const tapAction = this._config.tap_action || { action: 'more-info' };
+
+    tapContent.appendChild(this._createSelect('tap_action.action', 'Tap action', tapAction.action || 'more-info', [
+      { value: 'more-info', label: 'More Info (default)' },
+      { value: 'toggle', label: 'Toggle' },
+      { value: 'call-service', label: 'Call Service' },
+      { value: 'navigate', label: 'Navigate' },
+      { value: 'url', label: 'Open URL' },
+      { value: 'none', label: 'None (disabled)' }
+    ]));
+
+    // Conditional fields based on action type
+    if (tapAction.action === 'navigate') {
+      tapContent.appendChild(this._createTextfield('tap_action.navigation_path', 'Navigation path', tapAction.navigation_path, 'e.g., /lovelace/0'));
+    }
+
+    if (tapAction.action === 'url') {
+      tapContent.appendChild(this._createTextfield('tap_action.url_path', 'URL', tapAction.url_path));
+    }
+
+    if (tapAction.action === 'call-service') {
+      tapContent.appendChild(this._createTextfield('tap_action.service', 'Service', tapAction.service, 'e.g., light.toggle'));
+      const serviceDataNote = document.createElement('div');
+      serviceDataNote.className = 'section-note';
+      serviceDataNote.textContent = 'For service_data, use YAML editor';
+      tapContent.appendChild(serviceDataNote);
+    }
+
+    root.appendChild(this._createExpansionPanel('Tap Action', tapContent));
+
+    // Section 8: Severity Levels
+    const severityContent = document.createElement('div');
+    severityContent.className = 'panel-content';
+
+    const severityNote = document.createElement('div');
+    severityNote.className = 'section-note';
+    severityNote.textContent = 'Define color thresholds. Colors apply when value is <= the threshold. List in ascending order.';
+    severityContent.appendChild(severityNote);
+
+    const severityList = document.createElement('div');
+    severityList.className = 'severity-list';
+
+    const severities = this._config.severity || [];
+    severities.forEach((sev, index) => {
+      severityList.appendChild(this._createSeverityItem(index, sev));
+    });
+
+    severityContent.appendChild(severityList);
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-button';
+    addBtn.textContent = 'Add Severity Level';
+    addBtn.addEventListener('click', () => {
+      const newSev = { value: 0, fill_color: '#cccccc' };
+      const newSeverity = [...(this._config.severity || []), newSev];
+      this._config = { ...this._config, severity: newSeverity };
+      this._fireConfigChanged();
+      // Add new item to DOM without full re-render
+      const newIndex = newSeverity.length - 1;
+      severityList.appendChild(this._createSeverityItem(newIndex, newSev));
+    });
+    severityContent.appendChild(addBtn);
+
+    root.appendChild(this._createExpansionPanel('Severity Levels', severityContent));
+
+    // Clear and render
+    this.shadowRoot.innerHTML = '';
+    this.shadowRoot.appendChild(style);
+    this.shadowRoot.appendChild(root);
+  }
+}
+
+customElements.define('bignumber-card-editor', BigNumberCardEditor);
 customElements.define('bignumber-card', BigNumberCard);
 
 // Configure the preview in the Lovelace card picker
@@ -322,6 +859,6 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'bignumber-card',
   name: 'Big number card',
-  preview: false,
+  preview: true,
   description: 'A simple card to display big numbers for sensors. It also supports severity levels as background.'
 });
