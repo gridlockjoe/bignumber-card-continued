@@ -1,4 +1,4 @@
-/* Last modified: 26-Feb-2026 */
+/* Last modified: 26-Feb-2026 - v1.2.2 */
 class BigNumberCard extends HTMLElement {
   _DEFAULT_STYLE(){return 'var(--label-badge-blue)';}
   _DEFAULT_COLOR(){return 'var(--primary-text-color)';}
@@ -38,6 +38,10 @@ class BigNumberCard extends HTMLElement {
     // Allows overriding entity's unit_of_measurement for display
     // If undefined, falls back to entity attribute (original behavior)
     if (cardConfig.unit === undefined) cardConfig.unit = null;
+
+    // Unit position: "right" (default) places unit after value, "left" places it before
+    // Useful for currency symbols (e.g. £5.06 instead of 5.06£)
+    if (!cardConfig.unit_position) cardConfig.unit_position = "right";
 
     // NEW: Custom font size support (PR #47 - issue #39)
     // Allows independent control of title and value font sizes separate from scale parameter
@@ -319,8 +323,12 @@ class BigNumberCard extends HTMLElement {
       let value = this._formatNumber(entityState, config);
       if (config.hideunit==true)
         { root.getElementById("value").textContent = `${value}`; }
-      else
-        { root.getElementById("value").innerHTML = `${value}<small>${measurement}</small>`; }
+      else {
+        const unitHtml = `<small>${measurement}</small>`;
+        root.getElementById("value").innerHTML = config.unit_position === 'left'
+          ? `${unitHtml}${value}`
+          : `${value}${unitHtml}`;
+      }
       if (this.isNoneConfig){
         // NEW: Fixed None detection bug - check numeric value instead of formatted string (PR #46)
         if (isNaN(numValue)) {
@@ -725,6 +733,10 @@ class BigNumberCardEditor extends HTMLElement {
     displayContent.appendChild(this._createSwitch('hideunit', 'Hide unit of measurement', this._config.hideunit));
     displayContent.appendChild(this._createTextfield('round', 'Decimal places', this._config.round, 'Number of decimal places (0-10)', 'number'));
     displayContent.appendChild(this._createTextfield('unit', 'Custom unit', this._config.unit, 'Override entity unit of measurement'));
+    displayContent.appendChild(this._createSelect('unit_position', 'Unit position', this._config.unit_position || 'right', [
+      { value: 'right', label: 'Right (default) - e.g. 5.06 £' },
+      { value: 'left',  label: 'Left - e.g. £ 5.06' }
+    ]));
 
     root.appendChild(this._createExpansionPanel('Display Options', displayContent));
 

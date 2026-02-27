@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2-continued] - 2026-02-26
+
+### Added
+- New `unit_position` option to place the unit before the value instead of after
+  - `unit_position: left` displays as `£5.06` instead of `5.06£`
+  - `unit_position: right` (default) preserves existing behaviour
+  - Useful for currency symbols and any prefix-style units
+  - Configurable in the visual editor under Display Options
+
 ## [1.2.1-continued] - 2026-02-26
 
 ### Fixed
