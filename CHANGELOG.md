@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1-continued] - 2026-02-26
+
+### Fixed
+- Gradient background now works correctly with themes that use card-mod to override
+  ha-card's background (e.g. Frosted Glass theme). The gradient was previously set
+  directly on ha-card, which card-mod's async CSS injection would silently replace
+  with `transparent`. The gradient is now rendered on an inner div that is unaffected
+  by theme background overrides.
+
 ## [1.2.0-continued] - 2026-01-19
 
 ### Added

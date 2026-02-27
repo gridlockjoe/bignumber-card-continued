@@ -1,4 +1,4 @@
-/* Last modified: 19-Jan-2026 23:10 */
+/* Last modified: 26-Feb-2026 */
 class BigNumberCard extends HTMLElement {
   _DEFAULT_STYLE(){return 'var(--label-badge-blue)';}
   _DEFAULT_COLOR(){return 'var(--primary-text-color)';}
@@ -68,6 +68,12 @@ class BigNumberCard extends HTMLElement {
     this.isNoneConfig = Boolean(cardConfig.noneString || cardConfig.noneCardClass || cardConfig.noneValueClass)
 
     const card = document.createElement('ha-card');
+    // Gradient background is on a separate div, not on ha-card itself.
+    // Some themes (e.g. Frosted Glass via card-mod) set ha-card { background: transparent }
+    // asynchronously, which would wipe out a gradient placed directly on ha-card.
+    // Using an inner div means the gradient is unaffected by theme background overrides.
+    const bg = document.createElement('div');
+    bg.id = "bg";
     const content = document.createElement('div');
     content.id = "value"
     const title = document.createElement('div');
@@ -85,6 +91,8 @@ class BigNumberCard extends HTMLElement {
     style.textContent = `
       ha-card {
         text-align: center;
+        position: relative;
+        overflow: hidden;
         --bignumber-text-color: ${this._getTextColor(null, cardConfig)};
         --bignumber-fill-color: ${this._getFillColor(null, cardConfig)};
         --bignumber-background-color: ${this._getBackgroundColor(null, cardConfig)};
@@ -92,20 +100,32 @@ class BigNumberCard extends HTMLElement {
         --bignumber-direction: ${cardConfig.from};
         --base-unit: ${cardConfig.scale};
         padding: ${cardPadding};
+      }
+      #bg {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        border-radius: inherit;
         background: linear-gradient(to var(--bignumber-direction), var(--bignumber-background-color) var(--bignumber-percent), var(--bignumber-fill-color) var(--bignumber-percent));
       }
       #value {
         font-size: ${valueFontSize};
         line-height: ${valueFontSize};
         color: var(--bignumber-text-color);
+        position: relative;
+        z-index: 1;
       }
       #value small{opacity: ${cardConfig.opacity}}
       #title {
         font-size: ${titleFontSize};
         line-height: ${titleFontSize};
         color: var(--bignumber-text-color);
+        position: relative;
+        z-index: 1;
       }
     `;
+    card.appendChild(bg);
     card.appendChild(content);
     card.appendChild(title);
     card.appendChild(style);
