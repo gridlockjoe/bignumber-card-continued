@@ -43,6 +43,7 @@ A simple card to display big numbers for sensors. It also supports severity leve
 | title | string | optional | Name to display on card
 | title_font_size | string | optional | Custom font size for title (e.g., "14px", "1rem"). Overrides scale-based sizing
 | unit | string | optional | Custom unit to display instead of entity's unit_of_measurement. Leave unset to use entity unit. Set to empty string "" to force no unit. Examples: " %", " pancakes/hour", "°F"
+| unit_position | string | `right` | Position of the unit relative to the value: `right` (default, e.g., `5.06 kWh`) or `left` (e.g., `£5.06`)
 | value_font_size | string | optional | Custom font size for value (e.g., "30px", "2rem"). Overrides scale-based sizing
 
 #### Deprecated Option Names (Still Supported)
