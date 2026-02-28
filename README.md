@@ -134,6 +134,10 @@ Control the unfilled bar portion color globally or per-severity:
       background_color: '#440000'
 ```
 
+### Using card-mod to display cover/background images
+
+The card renders an inner background layer to support progress bar gradients and theme compatibility.  To use background images in the card, set `background_color: transparent`.  
+
 ### Handling None Values
 
 If your sensor may result in `None` (for instance if it is offline), you may wish to handle that separately. Here is an example, which uses [card-mod](https://github.com/thomasloven/lovelace-card-mod) to add special styling for the `None` case.
