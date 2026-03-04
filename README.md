@@ -234,4 +234,8 @@ This continuation is maintained by the community to keep the card compatible wit
 
 ## License
 
-Apache-2.0 License - See [LICENSE](LICENSE) file for details
+This project is primarily licensed under the **MIT License**. 
+
+However, to maintain compatibility with original contributions, it remains available under the **Apache License 2.0**. 
+
+See the [LICENSE](LICENSE) file for full details.
