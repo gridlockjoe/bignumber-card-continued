@@ -1,4 +1,11 @@
-/* Last modified: 26-Feb-2026 - v1.2.2 */
+/* Last modified: 04-Mar-2026 - v1.2.3 */
+
+console.info(
+  `%c BIGNUMBER-CARD-CONTINUED %c v1.2.3 `,
+  'color: black; background: #F2720C; font-weight: 600;',
+  'color: black; background: #00a5c9; font-weight: 600;'
+);
+
 class BigNumberCard extends HTMLElement {
   _DEFAULT_STYLE(){return 'var(--label-badge-blue)';}
   _DEFAULT_COLOR(){return 'var(--primary-text-color)';}
@@ -278,7 +285,9 @@ class BigNumberCard extends HTMLElement {
   // Uses toLocaleString() for automatic locale-based formatting
   // Respects config.round setting for decimal precision
   _formatNumber(value, config) {
-    const numValue = parseFloat(value);
+    // Use Number() instead of parseFloat() so strings like "2:13 PM" return NaN
+    // (parseFloat stops at the first non-numeric char and returns a partial value)
+    const numValue = Number(value);
     if (isNaN(numValue)) {
       return value;
     }

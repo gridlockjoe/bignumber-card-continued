@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.3-continued] - 2026-03-04
+
+### Fixed
+- Time and other mixed-format sensor values (e.g. "2:13 PM") now display correctly.
+  Previously, `parseFloat()` was used to detect numeric values, which partially parsed
+  strings like "2:13 PM" and returned only "2". Switched to `Number()`, which correctly
+  returns NaN for non-numeric strings so the original value is displayed unchanged.
+
 ## [1.2.2-continued] - 2026-02-26
 
 ### Added
