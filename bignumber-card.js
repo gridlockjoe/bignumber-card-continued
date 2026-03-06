@@ -1,7 +1,7 @@
-/* Last modified: 04-Mar-2026 - v1.2.3 */
+/* Last modified: 05-Mar-2026 - v1.2.4 */
 
 console.info(
-  `%c BIGNUMBER-CARD-CONTINUED %c v1.2.3 `,
+  `%c BIGNUMBER-CARD-CONTINUED %c v1.2.4 `,
   'color: black; background: #F2720C; font-weight: 600;',
   'color: black; background: #00a5c9; font-weight: 600;'
 );
@@ -60,6 +60,11 @@ class BigNumberCard extends HTMLElement {
     // Decouples card height from font sizes for better layout control
     // Defaults to null to maintain backwards compatibility with scale-based padding
     if (!cardConfig.card_padding) cardConfig.card_padding = null;
+
+    // NEW: Unit font size control (issue #8)
+    // Overrides the default <small> tag sizing for the unit of measurement
+    // Defaults to null (browser default for <small>, typically 0.83em of the value size)
+    if (!cardConfig.unit_font_size) cardConfig.unit_font_size = null;
 
     // Standardized color option names with backwards compatibility
     // fill_color: Bar fill color (new name for bnStyle)
@@ -127,7 +132,7 @@ class BigNumberCard extends HTMLElement {
         position: relative;
         z-index: 1;
       }
-      #value small{opacity: ${cardConfig.opacity}}
+      #value small{opacity: ${cardConfig.opacity}${cardConfig.unit_font_size ? `; font-size: ${cardConfig.unit_font_size}` : ''}}
       #title {
         font-size: ${titleFontSize};
         line-height: ${titleFontSize};
@@ -776,6 +781,7 @@ class BigNumberCardEditor extends HTMLElement {
 
     sizingContent.appendChild(this._createTextfield('scale', 'Scale (base unit)', this._config.scale || '50px'));
     sizingContent.appendChild(this._createTextfield('value_font_size', 'Value font size', this._config.value_font_size));
+    sizingContent.appendChild(this._createTextfield('unit_font_size', 'Unit font size', this._config.unit_font_size, 'Override unit of measurement font size (e.g., 20px, 1em)'));
     sizingContent.appendChild(this._createTextfield('title_font_size', 'Title font size', this._config.title_font_size));
     sizingContent.appendChild(this._createTextfield('card_padding', 'Card padding', this._config.card_padding));
 

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.4-continued] - 2026-03-05
+
+### Added
+- New `unit_font_size` option to independently control the unit of measurement font size
+  - Accepts any CSS length value (e.g., `20px`, `1em`, `1.2rem`)
+  - Overrides the default browser `<small>` tag sizing
+  - Configurable in the visual editor under Sizing
+  - Thanks to [@EdDickens](https://github.com/EdDickens) for raising this in issue #8
+
 ## [1.2.3-continued] - 2026-03-04
 
 ### Fixed
