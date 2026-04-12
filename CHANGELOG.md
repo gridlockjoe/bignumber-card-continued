@@ -10,10 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.5] - 2026-04-11
 
 ### Fixed
-- Card now sizes correctly in the HA sections (grid) view by implementing `getGridOptions()`.
-  Previously only `getCardSize()` was implemented, which applies to the masonry layout only.
-  The sections view uses a 12-column grid and requires `getGridOptions()` to determine card
-  dimensions. Default is 6 columns x 2 rows, resizable down to 3 columns x 1 row.
+- Card now sizes correctly in the HA sections (grid) view. Two changes were required:
+  1. Implemented `getGridOptions()` so HA knows the card's default grid dimensions
+     (6 columns x 2 rows, resizable down to 3 columns x 1 row).
+  2. Added `height: 100%` to `:host` and `ha-card`, with flexbox vertical centering,
+     so the card fills the full height allocated by the grid cell.
+  Previously, the card only implemented `getCardSize()` (masonry layout only) and had no
+  height-fill CSS, causing it to shrink to content size regardless of the assigned row count.
   Fixes issue #9 reported by [@phil11c](https://github.com/phil11c).
 
 ## [1.2.4-continued] - 2026-03-05

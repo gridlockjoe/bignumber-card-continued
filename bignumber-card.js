@@ -105,10 +105,18 @@ class BigNumberCard extends HTMLElement {
 
     const style = document.createElement('style');
     style.textContent = `
+      :host {
+        display: block;
+        height: 100%;
+      }
       ha-card {
         text-align: center;
         position: relative;
         overflow: hidden;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
         --bignumber-text-color: ${this._getTextColor(null, cardConfig)};
         --bignumber-fill-color: ${this._getFillColor(null, cardConfig)};
         --bignumber-background-color: ${this._getBackgroundColor(null, cardConfig)};
