@@ -1,7 +1,7 @@
-/* Last modified: 05-Mar-2026 - v1.2.4 */
+/* Last modified: 11-Apr-2026 - v1.2.5 */
 
 console.info(
-  `%c BIGNUMBER-CARD-CONTINUED %c v1.2.4 `,
+  `%c BIGNUMBER-CARD-CONTINUED %c v1.2.5 `,
   'color: black; background: #F2720C; font-weight: 600;',
   'color: black; background: #00a5c9; font-weight: 600;'
 );
@@ -366,6 +366,16 @@ class BigNumberCard extends HTMLElement {
 
   getCardSize() {
     return 1;
+  }
+
+  // Sections view (grid layout) sizing - 12-column grid system
+  getGridOptions() {
+    return {
+      rows: 2,
+      columns: 6,
+      min_rows: 1,
+      min_columns: 3,
+    };
   }
 }
 

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.5] - 2026-04-11
+
+### Fixed
+- Card now sizes correctly in the HA sections (grid) view by implementing `getGridOptions()`.
+  Previously only `getCardSize()` was implemented, which applies to the masonry layout only.
+  The sections view uses a 12-column grid and requires `getGridOptions()` to determine card
+  dimensions. Default is 6 columns x 2 rows, resizable down to 3 columns x 1 row.
+  Fixes issue #9 reported by [@phil11c](https://github.com/phil11c).
+
 ## [1.2.4-continued] - 2026-03-05
 
 ### Added
