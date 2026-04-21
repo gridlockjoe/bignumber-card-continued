@@ -1,7 +1,7 @@
-/* Last modified: 11-Apr-2026 - v1.2.5 */
+/* Last modified: 21-Apr-2026 - v1.2.6 */
 
 console.info(
-  `%c BIGNUMBER-CARD-CONTINUED %c v1.2.5 `,
+  `%c BIGNUMBER-CARD-CONTINUED %c v1.2.6 `,
   'color: black; background: #F2720C; font-weight: 600;',
   'color: black; background: #00a5c9; font-weight: 600;'
 );
@@ -311,7 +311,16 @@ class BigNumberCard extends HTMLElement {
       options.maximumFractionDigits = config.round;
     }
 
-    return numValue.toLocaleString(undefined, options);
+    // Pre-round so we can eliminate negative zero before formatting.
+    // toLocaleString can produce "-0" when a negative value rounds to zero (e.g. -0.4 with round:0).
+    const roundedValue = config.round != null
+      ? parseFloat(numValue.toFixed(config.round))
+      : numValue;
+
+    // Object.is(-0, 0) is false, so this specifically targets -0 only.
+    const normalizedValue = Object.is(roundedValue, -0) ? 0 : roundedValue;
+
+    return normalizedValue.toLocaleString(undefined, options);
   }
 
   set hass(hass) {

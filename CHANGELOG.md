@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.6] - 2026-04-21
+
+### Fixed
+- Negative values that round to zero (e.g. `-0.0` or `-0.4` with `round: 0`) now display as `0`
+  instead of `-0`. Fixes issue #10 reported by [@Yobby](https://github.com/Yobby).
+
 ## [1.2.5] - 2026-04-11
 
 ### Fixed
