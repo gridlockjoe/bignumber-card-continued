@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Big Number Card - Demo</title>
+  <style>
+    /* HA CSS custom properties - inherited through shadow DOM boundaries */
+    :root {
+      --primary-background-color: #f0f2f5;
+      --card-background-color: #ffffff;
+      --primary-text-color: #212121;
+      --secondary-text-color: #727272;
+      --text-primary-color: #ffffff;
+      --primary-color: #03a9f4;
+      --accent-color: #ff9800;
+      --divider-color: rgba(0, 0, 0, 0.12);
+      --disabled-color: #bdbdbd;
+      --error-color: #f44336;
+      --label-badge-blue: #1e88e5;
+      --ha-card-border-radius: 12px;
+      --ha-card-box-shadow:
+        0px 2px 1px -1px rgba(0,0,0,0.2),
+        0px 1px 1px 0px rgba(0,0,0,0.14),
+        0px 1px 3px 0px rgba(0,0,0,0.12);
+    }
+
+    [data-theme="dark"] {
+      --primary-background-color: #111111;
+      --card-background-color: #1e1e1e;
+      --primary-text-color: #e1e1e1;
+      --secondary-text-color: #9e9e9e;
+      --divider-color: rgba(255, 255, 255, 0.12);
+      --disabled-color: #555555;
+      --label-badge-blue: #42a5f5;
+      --ha-card-box-shadow:
+        0px 2px 1px -1px rgba(0,0,0,0.6),
+        0px 1px 1px 0px rgba(0,0,0,0.4),
+        0px 1px 3px 0px rgba(0,0,0,0.4);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--primary-background-color);
+      color: var(--primary-text-color);
+      min-height: 100vh;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    /* ---- Page header ---- */
+    .page-header {
+      background: var(--card-background-color);
+      border-bottom: 1px solid var(--divider-color);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      transition: background 0.3s ease;
+    }
+
+    .page-header h1 { font-size: 1rem; font-weight: 600; }
+
+    .header-subtitle { font-size: 0.78rem; color: var(--secondary-text-color); margin-top: 2px; }
+
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+
+    /* ---- Buttons ---- */
+    .btn {
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: opacity 0.15s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+    .btn:hover { opacity: 0.82; }
+    .btn:focus { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+    .btn-primary { background: var(--primary-color); color: #ffffff; }
+    .btn-secondary {
+      background: transparent;
+      color: var(--secondary-text-color);
+      border: 1px solid var(--divider-color);
+    }
+
+    /* ---- Workspace two-column layout ---- */
+    .workspace {
+      display: grid;
+      grid-template-columns: 356px 1fr;
+      gap: 16px;
+      padding: 16px 20px 32px;
+      max-width: 1200px;
+      margin: 0 auto;
+      align-items: start;
+    }
+
+    @media (max-width: 860px) {
+      .workspace { grid-template-columns: 1fr; }
+      .editor-panel { position: static; max-height: none; }
+    }
+
+    /* ---- Editor panel (left column) ---- */
+    .editor-panel {
+      background: var(--card-background-color);
+      border-radius: 10px;
+      box-shadow: var(--ha-card-box-shadow);
+      overflow: hidden;
+      /* Stick to viewport while preview scrolls on desktop */
+      position: sticky;
+      top: 58px;
+      max-height: calc(100vh - 74px);
+      display: flex;
+      flex-direction: column;
+      transition: background 0.3s ease;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--divider-color);
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--secondary-text-color);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .editor-body {
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    /* ---- Right column ---- */
+    .right-column { display: flex; flex-direction: column; gap: 16px; }
+
+    /* ---- Preview area (no outer panel - card provides its own chrome) ---- */
+    .preview-area { display: flex; flex-direction: column; gap: 8px; }
+
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--secondary-text-color);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0 2px;
+    }
+
+    /* bignumber-card fills 100% of its host height by default, so give the
+       preview card an explicit height to match what it looks like in a dashboard. */
+    #preview-container bignumber-card {
+      display: block;
+      height: 120px;
+    }
+
+    /* ---- YAML panel ---- */
+    .yaml-panel {
+      background: var(--card-background-color);
+      border-radius: 10px;
+      box-shadow: var(--ha-card-box-shadow);
+      overflow: hidden;
+      transition: background 0.3s ease;
+    }
+
+    .yaml-output {
+      display: block;
+      width: 100%;
+      font-family: 'SFMono-Regular', 'Cascadia Code', 'Courier New', monospace;
+      font-size: 0.78rem;
+      background: var(--primary-background-color);
+      color: var(--primary-text-color);
+      border: none;
+      padding: 12px 14px;
+      resize: vertical;
+      min-height: 160px;
+      line-height: 1.55;
+      outline: none;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    /* ---- Footer ---- */
+    .page-footer {
+      text-align: center;
+      padding: 18px 16px;
+      color: var(--secondary-text-color);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--divider-color);
+    }
+    .page-footer a { color: var(--primary-color); text-decoration: none; }
+    .page-footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <header class="page-header">
+    <div>
+      <h1>Big Number Card - Continued</h1>
+      <div class="header-subtitle">Interactive demo - no Home Assistant required</div>
+    </div>
+    <div class="header-actions">
+      <a class="btn btn-secondary" href="https://github.com/sxdjt/bignumber-card-continued" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <button class="btn btn-primary" id="theme-toggle">Dark</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+
+    <!-- Left column: the card's native editor element -->
+    <div class="editor-panel">
+      <div class="panel-header">
+        <span class="panel-title">Card Editor</span>
+        <button class="btn btn-secondary" id="btn-reset">Reset</button>
+      </div>
+      <div class="editor-body">
+        <div id="editor-mount"></div>
+      </div>
+    </div>
+
+    <!-- Right column: live card preview + YAML output -->
+    <div class="right-column">
+
+      <div class="preview-area">
+        <div class="section-label">Preview</div>
+        <div id="preview-container"></div>
+      </div>
+
+      <div class="yaml-panel">
+        <div class="panel-header">
+          <span class="panel-title">YAML Config</span>
+          <button class="btn btn-secondary" id="btn-copy">Copy</button>
+        </div>
+        <textarea class="yaml-output" id="yaml-output" readonly spellcheck="false"></textarea>
+      </div>
+
+    </div>
+  </div>
+
+  <footer class="page-footer">
+    <a href="https://github.com/sxdjt/bignumber-card-continued" target="_blank" rel="noopener noreferrer">bignumber-card-continued</a>
+    &nbsp;|&nbsp; MIT License &nbsp;|&nbsp; Demo data is simulated - no real sensors required
+  </footer>
+
+  <!--
+    Mock HA web components. Sync <script> tags execute before bignumber-card.js
+    so these are registered before the card tries to use them.
+  -->
+  <script>
+    // ---- ha-card ----
+    // The card creates ha-card inside its shadow DOM. It must have NO shadow root
+    // of its own. Also needs set hass() since the card calls root.lastChild.hass = hass.
+    if (!customElements.get('ha-card')) {
+      class HaCard extends HTMLElement {
+        constructor() {
+          super();
+          this.style.display = 'block';
+          this.style.background = 'var(--card-background-color, #ffffff)';
+          this.style.borderRadius = 'var(--ha-card-border-radius, 12px)';
+          this.style.boxShadow = 'var(--ha-card-box-shadow)';
+          this.style.overflow = 'hidden';
+          this.style.position = 'relative';
+          this.style.transition = 'background 0.3s ease';
+        }
+        // BigNumberCard calls root.lastChild.hass = hass where lastChild is ha-card
+        set hass(v) {}
+      }
+      customElements.define('ha-card', HaCard);
+    }
+
+    // ---- ha-switch ----
+    // Editor sets .checked and listens for 'change' event.
+    if (!customElements.get('ha-switch')) {
+      class HaSwitch extends HTMLElement {
+        constructor() {
+          super();
+          const shadow = this.attachShadow({ mode: 'open' });
+          shadow.innerHTML = `
+            <style>
+              :host { display: inline-flex; align-items: center; cursor: pointer; flex-shrink: 0; }
+              .track {
+                width: 36px; height: 20px; border-radius: 10px;
+                background: var(--disabled-color, #bdbdbd);
+                position: relative; transition: background 0.2s ease;
+              }
+              :host([checked]) .track { background: var(--primary-color, #03a9f4); }
+              .thumb {
+                width: 16px; height: 16px; border-radius: 50%; background: white;
+                position: absolute; top: 2px; left: 2px;
+                transition: transform 0.2s ease;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+              }
+              :host([checked]) .thumb { transform: translateX(16px); }
+            </style>
+            <div class="track"><div class="thumb"></div></div>
+          `;
+          this._checked = false;
+          shadow.querySelector('.track').addEventListener('click', () => {
+            this.checked = !this._checked;
+            this.dispatchEvent(new Event('change', { bubbles: true }));
+          });
+        }
+
+        get checked() { return this._checked; }
+        set checked(value) {
+          this._checked = !!value;
+          if (this._checked) {
+            this.setAttribute('checked', '');
+          } else {
+            this.removeAttribute('checked');
+          }
+        }
+      }
+      customElements.define('ha-switch', HaSwitch);
+    }
+
+    // ---- ha-textfield ----
+    // Editor sets: .label, .value, .type, .helper, .helperPersistent
+    // Editor listens for 'input' event and reads e.target.value.
+    // We dispatch 'input' and 'change' from the HOST element so
+    // e.target === ha-textfield and e.target.value resolves via the .value getter.
+    if (!customElements.get('ha-textfield')) {
+      class HaTextfield extends HTMLElement {
+        constructor() {
+          super();
+          const shadow = this.attachShadow({ mode: 'open' });
+          shadow.innerHTML = `
+            <style>
+              :host { display: block; }
+              .label-text {
+                display: block; font-size: 11px; font-weight: 500;
+                color: var(--secondary-text-color, #727272);
+                margin-bottom: 3px;
+              }
+              input {
+                width: 100%; padding: 7px 10px;
+                border: 1px solid var(--divider-color, #ccc);
+                border-radius: 5px;
+                background: var(--primary-background-color, #f0f2f5);
+                color: var(--primary-text-color, #212121);
+                font-size: 13px; outline: none;
+                box-sizing: border-box;
+                transition: border-color 0.15s, box-shadow 0.15s;
+              }
+              input:focus {
+                border-color: var(--primary-color, #03a9f4);
+                box-shadow: 0 0 0 2px rgba(3,169,244,0.18);
+              }
+              .helper-text {
+                display: block; font-size: 10px;
+                color: var(--secondary-text-color, #727272);
+                margin-top: 3px; font-style: italic;
+              }
+            </style>
+            <span class="label-text"></span>
+            <input>
+            <span class="helper-text"></span>
+          `;
+          this._input = shadow.querySelector('input');
+          this._labelEl = shadow.querySelector('.label-text');
+          this._helperEl = shadow.querySelector('.helper-text');
+
+          this._input.addEventListener('input', (innerEvent) => {
+            innerEvent.stopPropagation();
+            this.dispatchEvent(new Event('input', { bubbles: true }));
+          });
+          this._input.addEventListener('change', (innerEvent) => {
+            innerEvent.stopPropagation();
+            this.dispatchEvent(new Event('change', { bubbles: true }));
+          });
+        }
+
+        get value() { return this._input.value; }
+        set value(v) { this._input.value = (v !== undefined && v !== null) ? String(v) : ''; }
+
+        get label() { return this._labelEl.textContent; }
+        set label(v) { this._labelEl.textContent = v || ''; }
+
+        get type() { return this._input.type; }
+        set type(v) { this._input.type = v === 'number' ? 'number' : 'text'; }
+
+        set helper(v) { this._helperEl.textContent = v || ''; }
+        set helperPersistent(v) {}
+
+        set min(v) { if (v !== undefined) this._input.min = v; }
+        set max(v) { if (v !== undefined) this._input.max = v; }
+        set required(v) { this._input.required = !!v; }
+      }
+      customElements.define('ha-textfield', HaTextfield);
+    }
+
+    // ---- ha-selector ----
+    // Editor uses selector = { entity: {} } for entity picking.
+    // Shows five demo entity IDs as dropdown options.
+    // Fires: 'value-changed' CustomEvent with e.detail.value
+    if (!customElements.get('ha-selector')) {
+      class HaSelector extends HTMLElement {
+        constructor() {
+          super();
+          const shadow = this.attachShadow({ mode: 'open' });
+          shadow.innerHTML = `
+            <style>
+              :host { display: block; }
+              .field-label {
+                display: block; font-size: 11px; font-weight: 500;
+                color: var(--secondary-text-color, #727272);
+                margin-bottom: 4px;
+              }
+              select {
+                width: 100%; padding: 7px 28px 7px 10px;
+                border: 1px solid var(--divider-color, #ccc);
+                border-radius: 5px;
+                background-color: var(--primary-background-color, #f0f2f5);
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23727272'/%3E%3C/svg%3E");
+                background-repeat: no-repeat;
+                background-position: right 10px center;
+                color: var(--primary-text-color, #212121);
+                font-size: 13px; cursor: pointer;
+                -webkit-appearance: none; appearance: none; outline: none;
+              }
+              select:focus {
+                border-color: var(--primary-color, #03a9f4);
+                box-shadow: 0 0 0 2px rgba(3,169,244,0.18);
+              }
+            </style>
+            <span class="field-label"></span>
+            <select>
+              <option value="">-- Select entity --</option>
+              <option value="sensor.demo_temperature">sensor.demo_temperature</option>
+              <option value="sensor.demo_humidity">sensor.demo_humidity</option>
+              <option value="sensor.demo_power">sensor.demo_power</option>
+              <option value="sensor.demo_battery">sensor.demo_battery</option>
+              <option value="sensor.demo_price">sensor.demo_price</option>
+            </select>
+          `;
+          this._labelEl = shadow.querySelector('.field-label');
+          this._select = shadow.querySelector('select');
+          this._value = '';
+
+          this._select.addEventListener('change', () => {
+            this._value = this._select.value;
+            this.dispatchEvent(new CustomEvent('value-changed', {
+              detail: { value: this._value },
+              bubbles: true,
+            }));
+          });
+        }
+
+        set hass(v) {}
+
+        get label() { return this._labelEl.textContent; }
+        set label(v) { this._labelEl.textContent = v || ''; }
+
+        set selector(v) {}
+
+        get value() { return this._value; }
+        set value(v) {
+          this._value = (v !== undefined && v !== null) ? String(v) : '';
+          this._select.value = this._value;
+        }
+      }
+      customElements.define('ha-selector', HaSelector);
+    }
+
+    // ---- ha-expansion-panel ----
+    // Editor appends children (light DOM) and sets .header and .outlined.
+    // Renders as a collapsible accordion panel.
+    if (!customElements.get('ha-expansion-panel')) {
+      class HaExpansionPanel extends HTMLElement {
+        constructor() {
+          super();
+          const shadow = this.attachShadow({ mode: 'open' });
+          shadow.innerHTML = `
+            <style>
+              :host { display: block; margin-bottom: 8px; }
+              .panel-header {
+                display: flex; justify-content: space-between; align-items: center;
+                padding: 10px 14px; cursor: pointer;
+                border: 1px solid var(--divider-color, rgba(0,0,0,0.12));
+                border-radius: 5px;
+                background: var(--primary-background-color, #f0f2f5);
+                font-size: 13px; font-weight: 500;
+                user-select: none;
+                transition: opacity 0.15s;
+              }
+              .panel-header:hover { opacity: 0.82; }
+              :host([open]) .panel-header { border-radius: 5px 5px 0 0; }
+              .toggle-icon { font-size: 10px; transition: transform 0.2s; flex-shrink: 0; }
+              :host([open]) .toggle-icon { transform: rotate(180deg); }
+              .panel-body {
+                display: none;
+                border: 1px solid var(--divider-color, rgba(0,0,0,0.12));
+                border-top: none;
+                border-radius: 0 0 5px 5px;
+              }
+              :host([open]) .panel-body { display: block; }
+            </style>
+            <div class="panel-header">
+              <span class="title-text"></span>
+              <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="panel-body">
+              <slot></slot>
+            </div>
+          `;
+          this._titleEl = shadow.querySelector('.title-text');
+          shadow.querySelector('.panel-header').addEventListener('click', () => {
+            if (this.hasAttribute('open')) {
+              this.removeAttribute('open');
+            } else {
+              this.setAttribute('open', '');
+            }
+          });
+        }
+
+        set header(v) { this._titleEl.textContent = v || ''; }
+        set outlined(v) {}
+      }
+      customElements.define('ha-expansion-panel', HaExpansionPanel);
+    }
+  </script>
+
+  <!-- Card file: registers bignumber-card and bignumber-card-editor -->
+  <script src="bignumber-card.js"></script>
+
+  <script type="module">
+    await Promise.all([
+      customElements.whenDefined('bignumber-card'),
+      customElements.whenDefined('bignumber-card-editor'),
+    ]);
+
+    // ----------------------------------------------------------------
+    // Mock hass object
+    // BigNumberCard reads: hass.states[entityId].state,
+    // .attributes.unit_of_measurement, .attributes[config.attribute]
+    // No callWS or callApi needed.
+    // ----------------------------------------------------------------
+
+    const MOCK_HASS = {
+      states: {
+        'sensor.demo_temperature': {
+          state: '72.4',
+          attributes: { unit_of_measurement: '\u00b0F', friendly_name: 'Indoor Temperature' },
+        },
+        'sensor.demo_humidity': {
+          state: '54',
+          attributes: { unit_of_measurement: '%', friendly_name: 'Humidity' },
+        },
+        'sensor.demo_power': {
+          state: '1247',
+          attributes: { unit_of_measurement: 'W', friendly_name: 'Power Usage' },
+        },
+        'sensor.demo_battery': {
+          state: '87',
+          attributes: { unit_of_measurement: '%', friendly_name: 'Battery' },
+        },
+        'sensor.demo_price': {
+          state: '5.42',
+          attributes: { unit_of_measurement: '\u00a3', friendly_name: 'Gas Price' },
+        },
+      },
+    };
+
+    // ----------------------------------------------------------------
+    // Initial card config
+    // ----------------------------------------------------------------
+
+    const INITIAL_CONFIG = {
+      type: 'custom:bignumber-card',
+      entity: 'sensor.demo_temperature',
+      title: 'Indoor Temperature',
+      scale: '50px',
+    };
+
+    // ----------------------------------------------------------------
+    // YAML serializer
+    // ----------------------------------------------------------------
+
+    const YAML_RESERVED = new Set(['true', 'false', 'null', 'yes', 'no', 'on', 'off', '~']);
+
+    function needsYamlQuoting(str) {
+      if (str === '') return true;
+      if (YAML_RESERVED.has(str.toLowerCase())) return true;
+      if (/^\s|\s$/.test(str)) return true;
+      if (/^\d+(\.\d+)?$/.test(str)) return true;   // Pure numeric string
+      if (str.startsWith('#')) return true;           // Color hex values
+      if (/^[{[|>!&*]/.test(str)) return true;       // YAML special lead chars
+      if (/: /.test(str)) return true;               // Would look like a mapping
+      return false;
+    }
+
+    function valueToYaml(value, indentLevel) {
+      if (value === null || value === undefined) return 'null';
+      if (typeof value === 'boolean') return value ? 'true' : 'false';
+      if (typeof value === 'number') return String(value);
+
+      if (typeof value === 'string') {
+        if (needsYamlQuoting(value)) {
+          return `'${value.replace(/'/g, "''")}'`;
+        }
+        return value;
+      }
+
+      if (Array.isArray(value)) {
+        if (value.length === 0) return '[]';
+        const indent = '  '.repeat(indentLevel);
+        return value.map(item => {
+          if (item !== null && typeof item === 'object' && !Array.isArray(item)) {
+            const entries = Object.entries(item);
+            if (entries.length === 0) return `\n${indent}- {}`;
+            const [firstKey, firstVal] = entries[0];
+            const firstLine = `\n${indent}- ${firstKey}: ${valueToYaml(firstVal, indentLevel + 1)}`;
+            const restLines = entries.slice(1).map(([k, v]) =>
+              `\n${indent}  ${k}: ${valueToYaml(v, indentLevel + 1)}`
+            );
+            return firstLine + restLines.join('');
+          }
+          return `\n${indent}- ${valueToYaml(item, indentLevel + 1)}`;
+        }).join('');
+      }
+
+      if (typeof value === 'object') {
+        const entries = Object.entries(value);
+        if (entries.length === 0) return '{}';
+        const indent = '  '.repeat(indentLevel);
+        return entries.map(([k, v]) =>
+          `\n${indent}${k}: ${valueToYaml(v, indentLevel + 1)}`
+        ).join('');
+      }
+
+      return String(value);
+    }
+
+    function configToYaml(config) {
+      const lines = [];
+      for (const [key, value] of Object.entries(config)) {
+        if (key.startsWith('_')) continue;
+        if (value === null || value === undefined) continue;
+        if (value === '') continue;
+        if (Array.isArray(value) && value.length === 0) continue;
+        lines.push(`${key}: ${valueToYaml(value, 1)}`);
+      }
+      return lines.join('\n');
+    }
+
+    // ----------------------------------------------------------------
+    // Preview card
+    // ----------------------------------------------------------------
+
+    const previewContainer = document.getElementById('preview-container');
+
+    function mountPreviewCard(config) {
+      const existing = previewContainer.querySelector('bignumber-card');
+      if (existing) existing.remove();
+
+      const card = document.createElement('bignumber-card');
+      // Must be connected to DOM before setting hass (card checks isConnected)
+      previewContainer.appendChild(card);
+
+      try {
+        card.setConfig(config);
+      } catch (err) {
+        console.warn('[demo] setConfig error:', err.message);
+        card.remove();
+        return null;
+      }
+
+      card.hass = MOCK_HASS;
+      return card;
+    }
+
+    // ----------------------------------------------------------------
+    // YAML output
+    // ----------------------------------------------------------------
+
+    const yamlOutput = document.getElementById('yaml-output');
+
+    function updateYaml(config) {
+      yamlOutput.value = configToYaml(config);
+    }
+
+    // ----------------------------------------------------------------
+    // Editor
+    // BigNumberCardEditor.setConfig() is synchronous - no await needed.
+    // No getConfig() method - read ._config directly.
+    // ----------------------------------------------------------------
+
+    const editorMount = document.getElementById('editor-mount');
+
+    function buildEditor(config) {
+      editorMount.innerHTML = '';
+      const editor = document.createElement('bignumber-card-editor');
+      editorMount.appendChild(editor);
+      editor.setConfig({ ...config });
+      // set hass triggers entity picker population
+      editor.hass = MOCK_HASS;
+      return editor;
+    }
+
+    // Listen once on the stable editorMount container. config-changed bubbles
+    // from the editor element up through the DOM via bubbles:true, composed:true.
+    editorMount.addEventListener('config-changed', (event) => {
+      const config = event.detail.config;
+      updateYaml(config);
+      if (!config.entity) return;
+      try {
+        mountPreviewCard(config);
+      } catch (err) {
+        console.warn('[demo] preview update error:', err.message);
+      }
+    });
+
+    // ----------------------------------------------------------------
+    // Startup
+    // ----------------------------------------------------------------
+
+    mountPreviewCard({ ...INITIAL_CONFIG });
+
+    const initialEditor = buildEditor(INITIAL_CONFIG);
+    updateYaml(initialEditor._config);
+
+    // ----------------------------------------------------------------
+    // Reset button: recreate editor and preview from INITIAL_CONFIG.
+    // The config-changed listener stays on editorMount, so no re-attach needed.
+    // ----------------------------------------------------------------
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      mountPreviewCard({ ...INITIAL_CONFIG });
+      const freshEditor = buildEditor(INITIAL_CONFIG);
+      updateYaml(freshEditor._config);
+    });
+
+    // ----------------------------------------------------------------
+    // Copy YAML button
+    // ----------------------------------------------------------------
+
+    document.getElementById('btn-copy').addEventListener('click', async () => {
+      const btn = document.getElementById('btn-copy');
+      try {
+        await navigator.clipboard.writeText(yamlOutput.value);
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+      } catch {
+        // Clipboard API not available - fall back to select
+        yamlOutput.select();
+        document.execCommand('copy');
+      }
+    });
+
+    // ----------------------------------------------------------------
+    // Dark mode toggle
+    // ----------------------------------------------------------------
+
+    const themeToggle = document.getElementById('theme-toggle');
+    let isDark = false;
+
+    themeToggle.addEventListener('click', () => {
+      isDark = !isDark;
+      document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+      themeToggle.textContent = isDark ? 'Light' : 'Dark';
+    });
+  </script>
+
+</body>
+</html>
