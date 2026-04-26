@@ -735,8 +735,16 @@
     // ----------------------------------------------------------------
 
     mountPreviewCard({ ...INITIAL_CONFIG });
-
     const initialEditor = buildEditor(INITIAL_CONFIG);
+
+    // Yield to the browser event loop before reading _config.
+    // On some browsers, connecting native <select> elements to the DOM inside
+    // a shadow root fires a spurious 'change' event during the first paint.
+    // That change propagates as config-changed and wipes the YAML before we
+    // display it. Waiting one rAF lets those events settle, then we restore
+    // the authoritative initial config before calling updateYaml.
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    initialEditor.setConfig({ ...INITIAL_CONFIG });
     updateYaml(initialEditor._config);
 
     // ----------------------------------------------------------------
@@ -744,9 +752,11 @@
     // The config-changed listener stays on editorMount, so no re-attach needed.
     // ----------------------------------------------------------------
 
-    document.getElementById('btn-reset').addEventListener('click', () => {
+    document.getElementById('btn-reset').addEventListener('click', async () => {
       mountPreviewCard({ ...INITIAL_CONFIG });
       const freshEditor = buildEditor(INITIAL_CONFIG);
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      freshEditor.setConfig({ ...INITIAL_CONFIG });
       updateYaml(freshEditor._config);
     });
 
