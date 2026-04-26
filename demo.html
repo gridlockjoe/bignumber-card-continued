@@ -89,7 +89,7 @@
     .btn:focus { outline: 2px solid var(--primary-color); outline-offset: 2px; }
     .btn-primary { background: var(--primary-color); color: #ffffff; }
     .btn-secondary {
-      background: var(--primary-background-color);
+      background: transparent;
       color: var(--secondary-text-color);
       border: 1px solid var(--divider-color);
     }
@@ -175,14 +175,13 @@
       height: 120px;
     }
 
-    /* ---- YAML section ---- */
-    .yaml-area { display: flex; flex-direction: column; gap: 8px; }
-
-    .yaml-area-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 2px;
+    /* ---- YAML panel ---- */
+    .yaml-panel {
+      background: var(--card-background-color);
+      border-radius: 10px;
+      box-shadow: var(--ha-card-box-shadow);
+      overflow: hidden;
+      transition: background 0.3s ease;
     }
 
     .yaml-output {
@@ -190,7 +189,7 @@
       width: 100%;
       font-family: 'SFMono-Regular', 'Cascadia Code', 'Courier New', monospace;
       font-size: 0.78rem;
-      background: var(--card-background-color);
+      background: var(--primary-background-color);
       color: var(--primary-text-color);
       border: none;
       padding: 12px 14px;
@@ -198,8 +197,6 @@
       min-height: 160px;
       line-height: 1.55;
       outline: none;
-      border-radius: 10px;
-      box-shadow: var(--ha-card-box-shadow);
       transition: background 0.3s ease, color 0.3s ease;
     }
 
@@ -249,9 +246,9 @@
         <div id="preview-container"></div>
       </div>
 
-      <div class="yaml-area">
-        <div class="yaml-area-header">
-          <span class="section-label">YAML Config</span>
+      <div class="yaml-panel">
+        <div class="panel-header">
+          <span class="panel-title">YAML Config</span>
           <button class="btn btn-secondary" id="btn-copy">Copy</button>
         </div>
         <textarea class="yaml-output" id="yaml-output" readonly spellcheck="false"></textarea>
