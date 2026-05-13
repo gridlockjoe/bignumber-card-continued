@@ -1,7 +1,7 @@
-/* Last modified: 21-Apr-2026 - v1.2.6 */
+/* Last modified: 13-May-2026 - v1.2.7 */
 
 console.info(
-  `%c BIGNUMBER-CARD-CONTINUED %c v1.2.6 `,
+  `%c BIGNUMBER-CARD-CONTINUED %c v1.2.7 `,
   'color: black; background: #F2720C; font-weight: 600;',
   'color: black; background: #00a5c9; font-weight: 600;'
 );
@@ -397,7 +397,7 @@ class BigNumberCard extends HTMLElement {
 }
 
 // Visual Editor for Big Number Card
-// Uses ha-textfield for text inputs (maintains focus) and ha-selector for entity/select only
+// Uses ha-selector for text/number inputs and ha-selector for entity/select only
 class BigNumberCardEditor extends HTMLElement {
   constructor() {
     super();
@@ -405,6 +405,11 @@ class BigNumberCardEditor extends HTMLElement {
     this._config = {};
     this._hass = null;
     this._rendered = false;
+    // True while render() is running and immediately after, until the next
+    // animation frame. Guards against spurious 'change' events that some
+    // browsers fire on native <select> elements when they are first connected
+    // to a shadow DOM - which would otherwise trigger _fireConfigChanged().
+    this._initializing = false;
   }
 
   setConfig(config) {
@@ -419,14 +424,16 @@ class BigNumberCardEditor extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    // Update entity picker with hass reference
-    const entityPicker = this.shadowRoot?.querySelector('ha-selector');
-    if (entityPicker) {
-      entityPicker.hass = hass;
-    }
+    // Update all ha-selector elements (entity picker, text, number) with hass reference
+    this.shadowRoot?.querySelectorAll('ha-selector').forEach(s => {
+      s.hass = hass;
+    });
   }
 
   _fireConfigChanged() {
+    // Blocked during render() initialization to prevent spurious events
+    // from native <select> DOM connection from polluting the config stream.
+    if (this._initializing) return;
     const event = new CustomEvent('config-changed', {
       bubbles: true,
       composed: true,
@@ -450,6 +457,9 @@ class BigNumberCardEditor extends HTMLElement {
         this._rendered = false;
         this.render();
         this._rendered = true;
+        // render() sets _initializing=true to suppress spurious select events,
+        // but this config change is a real user action - fire it unconditionally.
+        this._initializing = false;
       }
     } else {
       if (value === '' || value === undefined) {
@@ -467,24 +477,24 @@ class BigNumberCardEditor extends HTMLElement {
     const container = document.createElement('div');
     container.className = 'field';
 
-    const textfield = document.createElement('ha-textfield');
-    textfield.label = label;
-    textfield.value = value ?? '';
+    const selector = document.createElement('ha-selector');
+    selector.hass = this._hass;
+    selector.label = label;
     if (type === 'number') {
-      textfield.type = 'number';
+      selector.selector = { number: { mode: 'box', step: 1 } };
+    } else {
+      selector.selector = { text: {} };
     }
-    if (helperText) {
-      textfield.helperPersistent = true;
-      textfield.helper = helperText;
-    }
-    textfield.addEventListener('input', (e) => {
+    selector.value = value ?? '';
+    selector.addEventListener('value-changed', (e) => {
+      e.stopPropagation();
       const newValue = type === 'number' ?
-        (e.target.value === '' ? undefined : Number(e.target.value)) :
-        e.target.value;
+        (e.detail.value === '' ? undefined : Number(e.detail.value)) :
+        e.detail.value;
       this._valueChanged(field, newValue);
     });
 
-    container.appendChild(textfield);
+    container.appendChild(selector);
     return container;
   }
 
@@ -564,28 +574,36 @@ class BigNumberCardEditor extends HTMLElement {
     item.className = 'severity-item';
 
     // Value field
-    const valueField = document.createElement('ha-textfield');
+    const valueField = document.createElement('ha-selector');
+    valueField.hass = this._hass;
     valueField.label = 'Value';
-    valueField.type = 'number';
+    valueField.selector = { number: { mode: 'box', step: 1 } };
     valueField.value = sev.value ?? '';
-    valueField.addEventListener('input', (e) => {
-      this._updateSeverity(index, 'value', e.target.value === '' ? undefined : Number(e.target.value));
+    valueField.addEventListener('value-changed', (e) => {
+      e.stopPropagation();
+      this._updateSeverity(index, 'value', e.detail.value === '' ? undefined : Number(e.detail.value));
     });
 
     // Fill color field (use new standard name, read from either for backwards compat)
-    const fillField = document.createElement('ha-textfield');
+    const fillField = document.createElement('ha-selector');
+    fillField.hass = this._hass;
     fillField.label = 'Fill Color';
+    fillField.selector = { text: {} };
     fillField.value = sev.fill_color || sev.bnStyle || '';
-    fillField.addEventListener('input', (e) => {
-      this._updateSeverity(index, 'fill_color', e.target.value);
+    fillField.addEventListener('value-changed', (e) => {
+      e.stopPropagation();
+      this._updateSeverity(index, 'fill_color', e.detail.value);
     });
 
     // Text color field (use new standard name, read from either for backwards compat)
-    const textField = document.createElement('ha-textfield');
+    const textField = document.createElement('ha-selector');
+    textField.hass = this._hass;
     textField.label = 'Text Color';
+    textField.selector = { text: {} };
     textField.value = sev.text_color || sev.color || '';
-    textField.addEventListener('input', (e) => {
-      this._updateSeverity(index, 'text_color', e.target.value);
+    textField.addEventListener('value-changed', (e) => {
+      e.stopPropagation();
+      this._updateSeverity(index, 'text_color', e.detail.value);
     });
 
     // Remove button
@@ -653,6 +671,11 @@ class BigNumberCardEditor extends HTMLElement {
   render() {
     if (!this.shadowRoot) return;
 
+    // Block config-changed until the first animation frame after render(),
+    // by which point any spurious browser change events have already fired.
+    this._initializing = true;
+    requestAnimationFrame(() => { this._initializing = false; });
+
     const style = document.createElement('style');
     style.textContent = `
       :host {
@@ -663,7 +686,6 @@ class BigNumberCardEditor extends HTMLElement {
         display: block;
         margin-bottom: 16px;
       }
-      .field ha-textfield,
       .field ha-selector {
         display: block;
         width: 100%;
@@ -727,7 +749,7 @@ class BigNumberCardEditor extends HTMLElement {
         margin-bottom: 8px;
         align-items: end;
       }
-      .severity-item ha-textfield {
+      .severity-item ha-selector {
         display: block;
       }
       .add-button, .remove-button {
