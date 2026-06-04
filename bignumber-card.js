@@ -1,7 +1,7 @@
-/* Last modified: 13-May-2026 - v1.2.7 */
+/* Last modified: 04-Jun-2026 - v1.3.0 */
 
 console.info(
-  `%c BIGNUMBER-CARD-CONTINUED %c v1.2.7 `,
+  `%c BIGNUMBER-CARD-CONTINUED %c v1.3.0 `,
   'color: black; background: #F2720C; font-weight: 600;',
   'color: black; background: #00a5c9; font-weight: 600;'
 );
@@ -956,5 +956,34 @@ window.customCards.push({
   type: 'bignumber-card',
   name: 'Big number card',
   preview: true,
-  description: 'A simple card to display big numbers for sensors. It also supports severity levels as background.'
+  description: 'A simple card to display big numbers for sensors. It also supports severity levels as background.',
+
+  // Suggest this card when the user picks an entity that is clearly numeric.
+  // Only numeric domains and numeric sensors (those with a unit_of_measurement
+  // or state_class attribute) are a good fit. Returning null for everything else
+  // keeps the card picker clean and avoids misleading suggestions.
+  getEntitySuggestion: (hass, entityId) => {
+    const entityState = hass.states[entityId];
+    if (!entityState) return null;
+
+    const domain = entityId.split('.')[0];
+    const attributes = entityState.attributes;
+
+    // input_number, number, and counter are always numeric
+    if (domain === 'input_number' || domain === 'number' || domain === 'counter') {
+      return { config: { type: 'custom:bignumber-card', entity: entityId } };
+    }
+
+    // For sensors, only suggest when the entity exposes numeric data -
+    // indicated by a non-empty unit_of_measurement or any state_class value.
+    if (domain === 'sensor') {
+      const hasUnit = attributes.unit_of_measurement !== undefined && attributes.unit_of_measurement !== '';
+      const hasStateClass = attributes.state_class !== undefined;
+      if (hasUnit || hasStateClass) {
+        return { config: { type: 'custom:bignumber-card', entity: entityId } };
+      }
+    }
+
+    return null;
+  }
 });

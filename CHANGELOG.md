@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-06-04
+
+### Added
+- Card suggestion support for HA 2026.6+: the card now appears in the "Community" section of the card picker when the user selects a numeric entity (sensor with `unit_of_measurement` or `state_class`, `input_number`, `number`, or `counter`).
+
 ## [1.2.7] - 2026-05-13
 
 ### Fixed
