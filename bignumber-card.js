@@ -14,9 +14,12 @@ class BigNumberCard extends HTMLElement {
     return document.createElement('bignumber-card-editor');
   }
 
-  static getStubConfig() {
+  static getStubConfig(hass) {
+    const entity = hass
+      ? Object.keys(hass.states).find((id) => id.startsWith('sensor.'))
+      : undefined;
     return {
-      entity: '',
+      entity: entity || '',
       title: '',
       scale: '50px'
     };

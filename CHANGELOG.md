@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Card picker preview was blank: `getStubConfig()` now accepts the `hass` object and selects a real sensor entity, preventing the `setConfig` entity-required error that silently killed the preview.
+
 ## [1.3.0] - 2026-06-04
 
 ### Added
