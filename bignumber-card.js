@@ -1,7 +1,7 @@
-/* Last modified: 04-Jun-2026 - v1.3.0 */
+/* Last modified: 06-Jul-2026 - 2026.7.6 */
 
 console.info(
-  `%c BIGNUMBER-CARD-CONTINUED %c v1.3.0 `,
+  `%c BIGNUMBER-CARD-CONTINUED %c 2026.7.6 `,
   'color: black; background: #F2720C; font-weight: 600;',
   'color: black; background: #00a5c9; font-weight: 600;'
 );
@@ -297,6 +297,31 @@ class BigNumberCard extends HTMLElement {
     return 100-100 * (value - min) / (max - min);
   }
 
+  // NEW: Resolve a dynamic progress-bar bound (issue #12).
+  // A bound (min or max) can be a static number OR sourced from another entity.
+  // - boundEntityId: if set, the number is read from that entity.
+  // - boundAttribute: if set, read that attribute of boundEntityId instead of its state
+  //   (e.g. a climate entity's max_temp attribute, since its state is "heat", not a number).
+  // Precedence: a valid numeric value from the referenced entity wins; otherwise fall
+  // back to the static value. Returns a Number, or undefined if nothing usable is
+  // configured (undefined disables the bar, matching the original behavior).
+  _resolveBound(hass, staticValue, boundEntityId, boundAttribute) {
+    if (boundEntityId) {
+      const boundEntity = hass.states[boundEntityId];
+      if (boundEntity) {
+        const raw = boundAttribute ? boundEntity.attributes[boundAttribute] : boundEntity.state;
+        const numeric = Number(raw);
+        if (!isNaN(numeric)) return numeric;
+      }
+      // Referenced entity is missing or non-numeric: fall through to the static fallback.
+    }
+    if (staticValue !== undefined && staticValue !== null) {
+      const numericStatic = Number(staticValue);
+      if (!isNaN(numericStatic)) return numericStatic;
+    }
+    return undefined;
+  }
+
   // NEW: Format numbers with locale-aware thousands separators (PR #46 - issue #45)
   // Uses toLocaleString() for automatic locale-based formatting
   // Respects config.round setting for decimal precision
@@ -344,10 +369,25 @@ class BigNumberCard extends HTMLElement {
     // Priority: config.unit (if defined) → entity.attributes.unit_of_measurement → empty string
     const measurement = config.unit !== null ? config.unit : (entity.attributes.unit_of_measurement || "");
 
-    if (entityState !== this._entityState) {
-      if (config.min !== undefined && config.max !== undefined) {
-        root.querySelector("ha-card").style.setProperty('--bignumber-percent', `${this._translatePercent(entityState, config.min, config.max)}%`);
+    // NEW: Resolve possibly-dynamic bounds every update (issue #12).
+    // These may be sourced from another entity, so they are re-read on each hass
+    // update rather than taken from the static config once.
+    const min = this._resolveBound(hass, config.min, config.min_entity, config.min_entity_attribute);
+    const max = this._resolveBound(hass, config.max, config.max_entity, config.max_entity_attribute);
+
+    // The progress bar must react to a change in EITHER the displayed value or the
+    // resolved bounds. A dynamic max/min entity can change while the displayed
+    // entity's state is unchanged, so this is guarded independently of the
+    // entityState check below (which gates color/text updates that only depend on state).
+    if (entityState !== this._entityState || min !== this._min || max !== this._max) {
+      if (min !== undefined && max !== undefined) {
+        root.querySelector("ha-card").style.setProperty('--bignumber-percent', `${this._translatePercent(entityState, min, max)}%`);
       }
+      this._min = min;
+      this._max = max;
+    }
+
+    if (entityState !== this._entityState) {
       root.querySelector("ha-card").style.setProperty('--bignumber-fill-color', `${this._getFillColor(entityState, config)}`);
       root.querySelector("ha-card").style.setProperty('--bignumber-text-color', `${this._getTextColor(entityState, config)}`);
       root.querySelector("ha-card").style.setProperty('--bignumber-background-color', `${this._getBackgroundColor(entityState, config)}`);
@@ -845,11 +885,13 @@ class BigNumberCardEditor extends HTMLElement {
 
     const progressNote = document.createElement('div');
     progressNote.className = 'section-note';
-    progressNote.textContent = 'Set min and max to enable progress bar display';
+    progressNote.textContent = 'Set min and max to enable progress bar display. An entity picked below overrides the matching static value, and falls back to it if the entity is unavailable.';
     progressContent.appendChild(progressNote);
 
     progressContent.appendChild(this._createTextfield('min', 'Minimum value', this._config.min, null, 'number'));
     progressContent.appendChild(this._createTextfield('max', 'Maximum value', this._config.max, null, 'number'));
+    progressContent.appendChild(this._createEntityPicker('min_entity', 'Minimum from entity (optional)', this._config.min_entity));
+    progressContent.appendChild(this._createEntityPicker('max_entity', 'Maximum from entity (optional)', this._config.max_entity));
     progressContent.appendChild(this._createSelect('from', 'Fill direction', this._config.from || 'left', [
       { value: 'left', label: 'Left to Right' },
       { value: 'right', label: 'Right to Left' },

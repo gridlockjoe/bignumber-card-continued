@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2026.7.6] - 2026-07-06
+
+### Added
+- Dynamic progress-bar bounds (issue #12, requested by [@Scabattoir](https://github.com/Scabattoir)):
+  `max_entity` / `min_entity` source the bar's maximum / minimum from another entity's state, and
+  `max_entity_attribute` / `min_entity_attribute` read a numeric attribute of that entity instead
+  (e.g. a `climate` entity's `max_temp`). An entity-sourced bound overrides the matching static
+  value and falls back to it when the entity is unavailable or non-numeric. The bar now
+  also updates when a referenced bound entity changes, not only when the displayed entity does.
+
+### Changed
+- Switched to CalVer versioning (`YYYY.M.D`).
+
 ### Fixed
 - Card picker preview was blank: `getStubConfig()` now accepts the `hass` object and selects a real sensor entity, preventing the `setConfig` entity-required error that silently killed the preview.
 

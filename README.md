@@ -31,7 +31,11 @@ A simple card to display big numbers for sensors. It also supports severity leve
 | from | string | left | Direction from where the bar will start filling (must have min/max specified)
 | hideunit | boolean | optional | hide the unit of measurement if set to true. If absent, unit of measurement will be shown
 | max | number | optional | Maximum value. Must be specified if you added min
+| max_entity | string | optional | Entity whose value is used as the maximum, overriding `max`. Falls back to `max` if the entity is unavailable or non-numeric. See [Dynamic min/max](#dynamic-minmax)
+| max_entity_attribute | string | optional | Attribute of `max_entity` to read instead of its state (e.g. `max_temp`). See [Dynamic min/max](#dynamic-minmax)
 | min | number | optional | Minimum value. If specified you get bar display
+| min_entity | string | optional | Entity whose value is used as the minimum, overriding `min`. Falls back to `min` if the entity is unavailable or non-numeric. See [Dynamic min/max](#dynamic-minmax)
+| min_entity_attribute | string | optional | Attribute of `min_entity` to read instead of its state. See [Dynamic min/max](#dynamic-minmax)
 | noneCardClass | string | optional | CSS class to add to card if value == None
 | noneString | string | optional | String to use for value if value == None
 | noneValueClass | string | optional | CSS class to add to value if value == None
@@ -133,6 +137,49 @@ Control the unfilled bar portion color globally or per-severity:
     - value: 300
       fill_color: var(--label-badge-red)
       background_color: '#440000'
+```
+
+### Dynamic min/max
+
+Instead of hard-coding `min` and `max`, you can drive either bound from another
+entity so the progress bar rescales automatically as that entity changes.
+
+- Use `max_entity` / `min_entity` to source a bound from another entity's **state**.
+- Use `max_entity_attribute` / `min_entity_attribute` to read a numeric **attribute**
+  of that entity instead of its state. This is useful when the value you want is not
+  the state itself - for example a `climate` entity whose state is `heat` but which
+  exposes `max_temp` and `min_temp` attributes, or a `number` / `input_number` helper
+  that exposes `max` and `min` attributes.
+
+An entity-sourced bound overrides the matching static value. If the referenced entity
+is unavailable or its value is not numeric, the card falls back to the static `max` /
+`min` (if provided); if there is no static fallback, the progress bar is simply not drawn.
+The bar updates whenever the displayed entity or a referenced bound entity changes.
+
+Source the maximum from another sensor's state, with a static fallback:
+
+```yaml
+- type: custom:bignumber-card
+  title: Power Draw
+  entity: sensor.current_power
+  min: 0
+  max: 3000                     # fallback if sensor.power_budget is unavailable
+  max_entity: sensor.power_budget
+  from: left
+```
+
+Source both bounds from attributes of a climate entity:
+
+```yaml
+- type: custom:bignumber-card
+  title: Thermostat
+  entity: climate.living_room
+  attribute: current_temperature
+  min_entity: climate.living_room
+  min_entity_attribute: min_temp
+  max_entity: climate.living_room
+  max_entity_attribute: max_temp
+  from: bottom
 ```
 
 ### Using card-mod to display cover/background images
