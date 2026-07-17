@@ -24,10 +24,10 @@ A simple card to display big numbers for sensors. It also supports severity leve
 | ---- | ---- | ------- | -----------
 | type | string | **Required** | `custom:bignumber-card`
 | attribute | string | optional | the entity attribute you want to display e.g. `current_temperature`.  The entity state will be shown if not defined.
-| background_color | string | `var(--card-background-color)` | Unfilled bar portion color. Can be hex or HA variable
+| background_color | string | `var(--card-background-color)` | Unfilled bar portion color. Can be a hex value, CSS color name (e.g. green), or HA variable
 | card_padding | string | optional | Custom card padding (e.g., "20px 10px"). Allows independent height control
 | entity | string | **Required** | `sensor.my_temperature`
-| fill_color | string | `var(--label-badge-blue)` | Bar fill color. Can be hex or HA variable. Example: `var(--label-badge-green)`
+| fill_color | string | `var(--label-badge-blue)` | Bar fill color. Can be a hex value, CSS color name (e.g. green), or HA variable. Example: `var(--label-badge-green)`
 | from | string | left | Direction from where the bar will start filling (must have min/max specified)
 | hideunit | boolean | optional | hide the unit of measurement if set to true. If absent, unit of measurement will be shown
 | max | number | optional | Maximum value. Must be specified if you added min
@@ -43,7 +43,7 @@ A simple card to display big numbers for sensors. It also supports severity leve
 | scale | string | 50px | Base scale for card: '50px'
 | severity | list | optional | A list of severity objects. Items in list must be ascending based on 'value'
 | tap_action | object | `{action: 'more-info'}` | Action to perform on tap. See Tap Action Object below
-| text_color | string | `var(--primary-text-color)` | Text color. Can be hex or HA variable. Example: `var(--secondary-text-color)`
+| text_color | string | `var(--primary-text-color)` | Text color. Can be a hex value, CSS color name (e.g. green), or HA variable. Example: `var(--secondary-text-color)`
 | title | string | optional | Name to display on card
 | title_font_size | string | optional | Custom font size for title (e.g., "14px", "1rem"). Overrides scale-based sizing
 | unit | string | optional | Custom unit to display instead of entity's unit_of_measurement. Leave unset to use entity unit. Set to empty string "" to force no unit. Examples: " %", " pancakes/hour", "°F"
@@ -65,9 +65,9 @@ For backwards compatibility, the following option names still work but the new n
 | Name | Type | Default | Description
 | ---- | ---- | ------- | -----------
 | value | number | **Required** | Value until which to use this severity
-| fill_color | string | **Required** | Bar fill color. Can be hex or HA variable. Example: `var(--label-badge-green)`
-| background_color | string | inherited | Unfilled bar portion color. Can be hex or HA variable
-| text_color | string | `var(--primary-text-color)` | Text color. Can be hex or HA variable. Example: `var(--secondary-text-color)`
+| fill_color | string | **Required** | Bar fill color. Can be a hex value, CSS color name (e.g. green), or HA variable. Example: `var(--label-badge-green)`
+| background_color | string | inherited | Unfilled bar portion color. Can be a hex value, CSS color name (e.g. green), or HA variable
+| text_color | string | `var(--primary-text-color)` | Text color. Can be a hex value, CSS color name (e.g. green), or HA variable. Example: `var(--secondary-text-color)`
 
 The deprecated names `bnStyle` and `color` also work in severity objects for backwards compatibility.
 
@@ -87,6 +87,8 @@ The deprecated names `bnStyle` and `color` also work in severity objects for bac
 - Font sizes can be customized independently from the `scale` parameter for better layout control
 - Make sure you use ascending object values to have consistent behaviour
 - Values are the upper limit until which that severity is applied
+- Any color option accepts a hex value (`#00FF00`), a standard CSS color name (`green`), or a Home Assistant theme variable (`var(--label-badge-green)`). See the [CSS color names reference](https://htmlcolorcodes.com/color-names/)
+- In the visual editor, every color field (including per-severity fill/text colors) has a swatch color picker next to the text input for quick visual selection
 
 ## Examples
 

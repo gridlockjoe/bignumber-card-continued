@@ -1,7 +1,7 @@
-/* Last modified: 06-Jul-2026 - 2026.7.6 */
+/* Last modified: 17-Jul-2026 - 2026.7.17 */
 
 console.info(
-  `%c BIGNUMBER-CARD-CONTINUED %c 2026.7.6 `,
+  `%c BIGNUMBER-CARD-CONTINUED %c 2026.7.17 `,
   'color: black; background: #F2720C; font-weight: 600;',
   'color: black; background: #00a5c9; font-weight: 600;'
 );
@@ -541,6 +541,81 @@ class BigNumberCardEditor extends HTMLElement {
     return container;
   }
 
+  // Resolve any CSS color string (named color like "green", hex, rgb(), or a
+  // theme var()) to a "#rrggbb" hex value suitable for <input type="color">.
+  // Returns null when the browser cannot resolve it to a concrete color
+  // (e.g. an invalid string, or a var() whose theme variable is not defined in
+  // this context). Callers should leave the swatch at its default when null.
+  _resolveColorToHex(value) {
+    if (!value) return null;
+    // Use a detached probe element to let the browser normalize the color.
+    // It must be attached to the document so that var(--...) theme tokens
+    // defined on :root have a chance to resolve.
+    const probe = document.createElement('div');
+    probe.style.color = '';
+    probe.style.color = value;
+    // If the browser rejected the value, style.color stays empty.
+    if (!probe.style.color) return null;
+    probe.style.display = 'none';
+    document.body.appendChild(probe);
+    const computed = getComputedStyle(probe).color; // e.g. "rgb(0, 128, 0)"
+    document.body.removeChild(probe);
+    const match = computed.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (!match) return null;
+    const toHex = (component) => Number(component).toString(16).padStart(2, '0');
+    return `#${toHex(match[1])}${toHex(match[2])}${toHex(match[3])}`;
+  }
+
+  // Build a combined color input: a text field (the source of truth, which
+  // accepts hex, CSS color names like "green", or var(--token)) paired with a
+  // native color-picker swatch for quick visual selection. Picking from the
+  // swatch writes a hex value; typing a resolvable color updates the swatch.
+  // onChange(value) is called with the new string value on either interaction.
+  _createColorInput(label, value, onChange) {
+    const container = document.createElement('div');
+    container.className = 'color-input';
+
+    const selector = document.createElement('ha-selector');
+    selector.hass = this._hass;
+    selector.label = label;
+    selector.selector = { text: {} };
+    selector.value = value ?? '';
+
+    const swatch = document.createElement('input');
+    swatch.type = 'color';
+    swatch.className = 'color-swatch';
+    swatch.title = 'Pick a color';
+    const initialHex = this._resolveColorToHex(value);
+    if (initialHex) swatch.value = initialHex;
+
+    selector.addEventListener('value-changed', (e) => {
+      e.stopPropagation();
+      onChange(e.detail.value);
+      // Keep the swatch in sync when the typed value resolves to a color.
+      const hex = this._resolveColorToHex(e.detail.value);
+      if (hex) swatch.value = hex;
+    });
+
+    swatch.addEventListener('input', (e) => {
+      const picked = e.target.value; // always "#rrggbb"
+      selector.value = picked;
+      onChange(picked);
+    });
+
+    container.appendChild(selector);
+    container.appendChild(swatch);
+    return container;
+  }
+
+  // Top-level color config field (wraps _createColorInput and writes the value
+  // back to the given config key via _valueChanged).
+  _createColorField(field, label, value) {
+    const container = document.createElement('div');
+    container.className = 'field';
+    container.appendChild(this._createColorInput(label, value, (newValue) => this._valueChanged(field, newValue)));
+    return container;
+  }
+
   _createSwitch(field, label, checked) {
     const container = document.createElement('div');
     container.className = 'toggle-row';
@@ -628,26 +703,19 @@ class BigNumberCardEditor extends HTMLElement {
     });
 
     // Fill color field (use new standard name, read from either for backwards compat)
-    const fillField = document.createElement('ha-selector');
-    fillField.hass = this._hass;
-    fillField.label = 'Fill Color';
-    fillField.selector = { text: {} };
-    fillField.value = sev.fill_color || sev.bnStyle || '';
-    fillField.addEventListener('value-changed', (e) => {
-      e.stopPropagation();
-      this._updateSeverity(index, 'fill_color', e.detail.value);
-    });
+    // Combined text input + color-picker swatch; accepts hex, CSS names, or var().
+    const fillField = this._createColorInput(
+      'Fill Color',
+      sev.fill_color || sev.bnStyle || '',
+      (newValue) => this._updateSeverity(index, 'fill_color', newValue)
+    );
 
     // Text color field (use new standard name, read from either for backwards compat)
-    const textField = document.createElement('ha-selector');
-    textField.hass = this._hass;
-    textField.label = 'Text Color';
-    textField.selector = { text: {} };
-    textField.value = sev.text_color || sev.color || '';
-    textField.addEventListener('value-changed', (e) => {
-      e.stopPropagation();
-      this._updateSeverity(index, 'text_color', e.detail.value);
-    });
+    const textField = this._createColorInput(
+      'Text Color',
+      sev.text_color || sev.color || '',
+      (newValue) => this._updateSeverity(index, 'text_color', newValue)
+    );
 
     // Remove button
     const removeBtn = document.createElement('button');
@@ -746,6 +814,9 @@ class BigNumberCardEditor extends HTMLElement {
         margin-bottom: 12px;
         font-style: italic;
       }
+      .section-note a {
+        color: var(--primary-color);
+      }
       .toggle-row {
         display: flex;
         justify-content: space-between;
@@ -794,6 +865,26 @@ class BigNumberCardEditor extends HTMLElement {
       }
       .severity-item ha-selector {
         display: block;
+      }
+      .color-input {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .color-input ha-selector {
+        flex: 1 1 auto;
+        display: block;
+        min-width: 0;
+      }
+      .color-swatch {
+        flex: 0 0 auto;
+        width: 42px;
+        height: 42px;
+        padding: 2px;
+        border: 1px solid var(--divider-color);
+        border-radius: 6px;
+        background: var(--card-background-color, #fff);
+        cursor: pointer;
       }
       .add-button, .remove-button {
         padding: 8px 16px;
@@ -852,12 +943,14 @@ class BigNumberCardEditor extends HTMLElement {
 
     const colorNote = document.createElement('div');
     colorNote.className = 'section-note';
-    colorNote.textContent = 'Use hex colors (#FF0000) or CSS variables (var(--primary-color))';
+    // innerHTML is safe here: content is a static string with no user input.
+    // rel="noopener noreferrer" per project security guidance for external links.
+    colorNote.innerHTML = 'Use the swatch to pick a color, or type a hex value (#FF0000), a CSS color name (green), or a CSS variable (var(--primary-color)). <a href="https://htmlcolorcodes.com/color-names/" target="_blank" rel="noopener noreferrer">CSS color names reference</a>.';
     colorsContent.appendChild(colorNote);
 
-    colorsContent.appendChild(this._createTextfield('text_color', 'Text color', this._config.text_color || this._config.color));
-    colorsContent.appendChild(this._createTextfield('fill_color', 'Fill color (bar/background)', this._config.fill_color || this._config.bnStyle));
-    colorsContent.appendChild(this._createTextfield('background_color', 'Background color (unfilled portion)', this._config.background_color));
+    colorsContent.appendChild(this._createColorField('text_color', 'Text color', this._config.text_color || this._config.color));
+    colorsContent.appendChild(this._createColorField('fill_color', 'Fill color (bar/background)', this._config.fill_color || this._config.bnStyle));
+    colorsContent.appendChild(this._createColorField('background_color', 'Background color (unfilled portion)', this._config.background_color));
     colorsContent.appendChild(this._createTextfield('opacity', 'Unit text opacity', this._config.opacity || '0.5', 'Value between 0 and 1'));
 
     root.appendChild(this._createExpansionPanel('Colors', colorsContent));
@@ -956,7 +1049,9 @@ class BigNumberCardEditor extends HTMLElement {
 
     const severityNote = document.createElement('div');
     severityNote.className = 'section-note';
-    severityNote.textContent = 'Define color thresholds. Colors apply when value is <= the threshold. List in ascending order.';
+    // innerHTML is safe here: content is a static string with no user input.
+    // rel="noopener noreferrer" per project security guidance for external links.
+    severityNote.innerHTML = 'Define color thresholds. Colors apply when value is &lt;= the threshold. List in ascending order. Use the swatch to pick a color, or type a hex value, a CSS color name (green), or a CSS variable. <a href="https://htmlcolorcodes.com/color-names/" target="_blank" rel="noopener noreferrer">CSS color names reference</a>.';
     severityContent.appendChild(severityNote);
 
     const severityList = document.createElement('div');

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2026.7.17] - 2026-07-17
+
+### Added
+- Color-picker swatch in the visual editor next to every color field (text, fill, background, and each severity level's fill/text colors). The text input remains the source of truth and still accepts hex, CSS color names, or theme variables; the swatch is a quick visual picker that writes a hex value.
+- Help link to a CSS color names reference (htmlcolorcodes.com) in the editor's Colors and Severity notes.
+
+### Changed
+- Documented that all color options accept standard CSS color names (e.g. `green`) in addition to hex values and Home Assistant theme variables. (Named colors already worked at render time; this clarifies support and surfaces it in the editor.)
+
 ## [2026.7.6] - 2026-07-06
 
 ### Added
