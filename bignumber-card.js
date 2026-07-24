@@ -1,7 +1,7 @@
-/* Last modified: 17-Jul-2026 - 2026.7.17 */
+/* Last modified: 24-Jul-2026 - 2026.7.24 */
 
 console.info(
-  `%c BIGNUMBER-CARD-CONTINUED %c 2026.7.17 `,
+  `%c BIGNUMBER-CARD-CONTINUED %c 2026.7.24 `,
   'color: black; background: #F2720C; font-weight: 600;',
   'color: black; background: #00a5c9; font-weight: 600;'
 );
@@ -78,6 +78,13 @@ class BigNumberCard extends HTMLElement {
     if (!cardConfig.text_color) cardConfig.text_color = null;
     if (!cardConfig.background_color) cardConfig.background_color = null;
 
+    // NEW: Fill container height toggle (issue #13)
+    // Default true keeps the height:100% fill behavior needed in sections/grid view.
+    // Set false to size the card to its content, required when placed in a
+    // picture-elements card (which has no bounded parent height, so height:100%
+    // would otherwise stretch the card to the full image height).
+    if (cardConfig.full_height === undefined) cardConfig.full_height = true;
+
     // NEW: Tap action support (PR #48 - issue #41)
     // Defaults to more-info to maintain backwards compatibility with existing behavior
     if (!cardConfig.tap_action) {
@@ -110,13 +117,13 @@ class BigNumberCard extends HTMLElement {
     style.textContent = `
       :host {
         display: block;
-        height: 100%;
+        height: ${cardConfig.full_height ? '100%' : 'auto'};
       }
       ha-card {
         text-align: center;
         position: relative;
         overflow: hidden;
-        height: 100%;
+        height: ${cardConfig.full_height ? '100%' : 'auto'};
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -928,6 +935,8 @@ class BigNumberCardEditor extends HTMLElement {
 
     displayContent.appendChild(this._createTextfield('attribute', 'Attribute (optional)', this._config.attribute, 'Display entity attribute instead of state'));
     displayContent.appendChild(this._createSwitch('hideunit', 'Hide unit of measurement', this._config.hideunit));
+    // Default true; use !== false so an unset config shows the toggle as on (issue #13)
+    displayContent.appendChild(this._createSwitch('full_height', 'Fill container height (turn off for picture-elements)', this._config.full_height !== false));
     displayContent.appendChild(this._createTextfield('round', 'Decimal places', this._config.round, 'Number of decimal places (0-10)', 'number'));
     displayContent.appendChild(this._createTextfield('unit', 'Custom unit', this._config.unit, 'Override entity unit of measurement'));
     displayContent.appendChild(this._createSelect('unit_position', 'Unit position', this._config.unit_position || 'right', [

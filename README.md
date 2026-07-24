@@ -29,6 +29,7 @@ A simple card to display big numbers for sensors. It also supports severity leve
 | entity | string | **Required** | `sensor.my_temperature`
 | fill_color | string | `var(--label-badge-blue)` | Bar fill color. Can be a hex value, CSS color name (e.g. green), or HA variable. Example: `var(--label-badge-green)`
 | from | string | left | Direction from where the bar will start filling (must have min/max specified)
+| full_height | boolean | true | Fill the container height. Leave `true` for normal dashboard/grid/sections placement. Set `false` to size the card to its content when placing it in a `picture-elements` card. See [Picture Elements](#picture-elements)
 | hideunit | boolean | optional | hide the unit of measurement if set to true. If absent, unit of measurement will be shown
 | max | number | optional | Maximum value. Must be specified if you added min
 | max_entity | string | optional | Entity whose value is used as the maximum, overriding `max`. Falls back to `max` if the entity is unavailable or non-numeric. See [Dynamic min/max](#dynamic-minmax)
@@ -234,6 +235,33 @@ Customize font sizes independently from card scale:
   title_font_size: 12px
   value_font_size: 48px
   card_padding: 15px 10px
+```
+
+### Picture Elements
+
+When placing the card inside a `picture-elements` card, set `full_height: false`. A
+`picture-elements` card positions each element absolutely over the image and gives it
+no bounded height, so the card's default `height: 100%` would stretch it to the full
+image height. Setting `full_height: false` sizes the card to its content instead.
+
+Only card options (`scale`, `min`, `max`, `full_height`, ...) go at the element level;
+the `style:` block is for CSS positioning only (`top`, `left`, ...).
+
+```yaml
+type: picture-elements
+image: https://demo.home-assistant.io/stub_config/floorplan.png
+elements:
+  - type: custom:bignumber-card
+    entity: sensor.tempest_humidity
+    title: Luftfeuchtigkeit
+    scale: 13px
+    min: 0
+    max: 100
+    fill_color: var(--label-badge-blue)
+    full_height: false
+    style:
+      top: 50%
+      left: 32%
 ```
 
 ### Tap Action Examples

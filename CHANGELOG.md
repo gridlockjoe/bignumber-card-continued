@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2026.7.24] - 2026-07-24
+
+### Fixed
+- Card stretching to the full image height when placed in a `picture-elements` card (issue #13, reported by [@fridigit](https://github.com/fridigit)). A new `full_height` option (default `true`) preserves the existing fill-the-cell behavior in dashboard/grid/sections views; set `full_height: false` to size the card to its content, which is what `picture-elements` placements need. Also exposed as a "Fill container height" toggle in the visual editor.
+
 ## [2026.7.17] - 2026-07-17
 
 ### Added
